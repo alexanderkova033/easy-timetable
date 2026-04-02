@@ -1,0 +1,15 @@
+{
+  "name": "easy-timetable",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Create a timetable effortlessly with gaps, tasks, and a live day preview.",
+  "scripts": {
+    "start": "serve src -p 5173",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "serve": "^14.2.4",
+    "vitest": "^3.2.4"
+  }
+}

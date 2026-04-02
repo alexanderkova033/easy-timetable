@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Easy Timetable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./timetable/ui/timetable.css" />
+</head>
+<body data-background="verdant">
+<script>
+  (function () {
+    var KEY = "easy-timetable-v2";
+    var BGS = { aurora: 1, midnight: 1, paper: 1, ocean: 1, dots: 1, minimal: 1, verdant: 1 };
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      if (!s || typeof s !== "object") return;
+      if (s.backgroundId && BGS[s.backgroundId]) {
+        document.body.setAttribute("data-background", s.backgroundId);
+      }
+      if (s.fontScale) document.documentElement.dataset.fontScale = s.fontScale;
+      document.documentElement.dataset.reduceMotion = s.reduceMotion ? "1" : "0";
+      document.documentElement.dataset.accentMotion =
+        s.accentMotion !== false && !s.reduceMotion ? "1" : "0";
+    } catch (e) {}
+  })();
+</script>
+<div class="app-shell">
+    <div class="bg-pattern" aria-hidden="true"></div>
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+
+    <section class="hero card hero--micro wrap" aria-labelledby="heroMicroHeading">
+      <div class="hero-micro-inner">
+        <div class="hero-micro-text">
+          <h1 id="heroMicroHeading" class="hero-micro-title">
+            Plan your week in <span class="hero-gradient-text">three steps</span>
+          </h1>
+          <p class="hero-micro-lead">Gaps per day, shared tasks, and a live Mon–Sun grid — all stored in this browser.</p>
+        </div>
+        <div class="hero-micro-bar" aria-label="Timetable and overview">
+          <div class="hero-micro-profiles" aria-label="Timetables">
+            <div class="control-group hero-profile-select">
+              <label class="control-label" for="profileSelect">Timetable</label>
+              <select id="profileSelect" class="control-select control-select-wide"></select>
+            </div>
+            <button type="button" class="soft-btn soft-btn-icon" id="newProfileBtn" title="New timetable">＋ New</button>
+            <button type="button" class="soft-btn soft-btn-ghost danger-ghost" id="deleteProfileBtn">Delete</button>
+          </div>
+          <div class="top-stats hero-stats-compact" aria-label="Overview">
+            <div class="top-stat"><span>Free (week)</span><strong id="statFree">0m</strong></div>
+            <div class="top-stat"><span>Tasks</span><strong id="statTasks">0</strong></div>
+            <div class="top-stat"><span>Status</span><strong id="statStatus">Waiting</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="main-with-rail wrap">
+    <aside class="app-dock-rail app-dock-rail--icons" aria-label="Appearance and data">
+      <div class="dock-rail-glow" aria-hidden="true"></div>
+      <div class="dock-bottom-inner dock-icon-stack">
+        <details class="dock-flyout dock-flyout-look">
+          <summary class="dock-icon-btn" title="Look &amp; week" aria-label="Wallpaper, week start, text size, and motion">
+            <svg class="dock-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+          </summary>
+          <div class="dock-flyout-panel" tabindex="-1">
+            <div class="dock-flyout-panel-head">Look &amp; week</div>
+            <div class="dock-bottom-panel dock-flyout-panel-body">
+              <div class="dock-bottom-panel-grid">
+                <div class="control-group">
+                  <label class="control-label" for="backgroundSelect">Wallpaper</label>
+                  <select id="backgroundSelect" class="control-select control-select-wide"></select>
+                </div>
+                <div class="control-group">
+                  <label class="control-label" for="weekStartSelect">Week starts</label>
+                  <select id="weekStartSelect" class="control-select control-select-narrow">
+                    <option value="1">Mon</option>
+                    <option value="0">Sun</option>
+                  </select>
+                </div>
+                <div class="control-group">
+                  <label class="control-label" for="fontScaleSelect">Text size</label>
+                  <select id="fontScaleSelect" class="control-select control-select-narrow"></select>
+                </div>
+                <div class="dock-bottom-toggles">
+                  <label class="check-inline check-pill">
+                    <input type="checkbox" id="reduceMotionToggle" />
+                    <span>Calm motion</span>
+                  </label>
+                  <label class="check-inline check-pill">
+                    <input type="checkbox" id="accentMotionToggle" />
+                    <span>Flashy UI</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="dock-icon-divider" aria-hidden="true"></div>
+
+        <div class="dock-icon-actions" aria-label="Import and export">
+          <button type="button" class="dock-icon-btn dock-icon-btn--accent" id="exportBtn" title="Export (Ctrl+E)" aria-label="Export timetable">
+            <svg class="dock-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <button type="button" class="dock-icon-btn" id="importBtn" title="Import (Ctrl+I)" aria-label="Import timetable">
+            <svg class="dock-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </button>
+          <input type="file" id="importFile" accept="application/json,.json" hidden />
+          <button type="button" class="dock-icon-btn" id="undoBtn" disabled title="Undo (Ctrl+Z)" aria-label="Undo">
+            <svg class="dock-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          </button>
+        </div>
+
+        <div class="dock-icon-divider" aria-hidden="true"></div>
+
+        <details class="dock-flyout dock-shortcuts">
+          <summary class="dock-icon-btn" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+            <svg class="dock-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h8M8 16h6"/></svg>
+          </summary>
+          <div class="dock-flyout-panel dock-flyout-panel--wide" tabindex="-1">
+            <div class="dock-flyout-panel-head">Shortcuts</div>
+            <div class="dock-shortcuts-body">
+              <p class="shortcut-hint shortcut-hint--dock">
+                <span class="shortcut-hint-label">Keys</span>
+                <kbd>Alt</kbd><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> steps · <kbd>Ctrl</kbd><kbd>E</kbd> export · <kbd>Ctrl</kbd><kbd>I</kbd> import · <kbd>Ctrl</kbd><kbd>Z</kbd> undo
+              </p>
+            </div>
+          </div>
+        </details>
+      </div>
+    </aside>
+
+    <main class="page page-main">
+    <nav class="step-nav-wrap" aria-label="Steps">
+      <div class="step-nav">
+        <button type="button" class="step-btn active" data-step="1" aria-current="step">
+          <span class="step-no">1</span>
+          <span class="step-copy">
+            <strong>Time</strong>
+            <small>Build your gaps</small>
+          </span>
+        </button>
+        <button type="button" class="step-btn" data-step="2">
+          <span class="step-no">2</span>
+          <span class="step-copy">
+            <strong>Tasks</strong>
+            <small>Create what to do</small>
+          </span>
+        </button>
+        <button type="button" class="step-btn" data-step="3">
+          <span class="step-no">3</span>
+          <span class="step-copy">
+            <strong>Plan</strong>
+            <small>Priority and preview</small>
+          </span>
+        </button>
+      </div>
+    </nav>
+
+      <div class="page-bottom">
+      <section class="panel card active" id="step1Panel" data-step-panel="1">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">Step 1 · Start here</div>
+            <h2>Set your free time by day</h2>
+            <p>Welcome — this is your home base. Pick a weekday, set gaps with the time rings or a quick template, then move on to tasks and the week preview. Everything stays in your browser.</p>
+          </div>
+        </div>
+
+        <div class="step1-workspace">
+        <div class="day-tabs-bar">
+          <span class="day-tabs-kicker" id="dayTabsLabel">Editing</span>
+          <div class="day-tabs" id="dayTabs" role="tablist" aria-labelledby="dayTabsLabel"></div>
+        </div>
+        <div class="template-bar">
+          <span class="template-bar-label">Quick layout for this day</span>
+          <div class="template-row" id="templateRow"></div>
+        </div>
+        <div class="copy-day-bar">
+          <label class="copy-day-label" for="copyDaySource">Copy gaps from</label>
+          <select id="copyDaySource" class="control-select copy-day-select"></select>
+          <button type="button" class="soft-btn" id="copyDayBtn">Apply to this day</button>
+        </div>
+
+        <form id="gapForm" class="stack" novalidate>
+          <div class="gap-clock" aria-label="Gap start and end time">
+            <div class="gap-clock-rings" aria-hidden="true"></div>
+            <div class="gap-clock-inner">
+          <div class="wheel-time-grid">
+            <section class="wheel-card">
+              <div class="wheel-card-head">
+                <span class="wheel-label">Start</span>
+                <strong class="wheel-time-readout" id="startDisplay">09:00</strong>
+              </div>
+              <div class="wheel-picker" data-picker="start">
+                <div class="wheel-column-wrap">
+                  <div class="wheel-overlay" aria-hidden="true"></div>
+                  <div class="wheel-column" id="startHourWheel" data-wheel="start-hour" aria-label="Start hour"></div>
+                </div>
+                <div class="wheel-separator">:</div>
+                <div class="wheel-column-wrap">
+                  <div class="wheel-overlay" aria-hidden="true"></div>
+                  <div class="wheel-column" id="startMinuteWheel" data-wheel="start-minute" aria-label="Start minute"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="wheel-card">
+              <div class="wheel-card-head">
+                <span class="wheel-label">End</span>
+                <strong class="wheel-time-readout" id="endDisplay">10:00</strong>
+              </div>
+              <div class="wheel-picker" data-picker="end">
+                <div class="wheel-column-wrap">
+                  <div class="wheel-overlay" aria-hidden="true"></div>
+                  <div class="wheel-column" id="endHourWheel" data-wheel="end-hour" aria-label="End hour"></div>
+                </div>
+                <div class="wheel-separator">:</div>
+                <div class="wheel-column-wrap">
+                  <div class="wheel-overlay" aria-hidden="true"></div>
+                  <div class="wheel-column" id="endMinuteWheel" data-wheel="end-minute" aria-label="End minute"></div>
+                </div>
+              </div>
+            </section>
+          </div>
+            </div>
+          </div>
+
+          <div class="quick-box">
+            <div class="quick-row">
+              <button type="button" class="soft-btn" id="useNowBtn">Use current time</button>
+              <div class="chip-row" role="group" aria-label="Quick gap duration">
+                <button type="button" class="chip-btn active" data-gap-duration="30">+30m</button>
+                <button type="button" class="chip-btn" data-gap-duration="45">+45m</button>
+                <button type="button" class="chip-btn" data-gap-duration="60">+1h</button>
+                <button type="button" class="chip-btn" data-gap-duration="90">+1h 30</button>
+                <button type="button" class="chip-btn" data-gap-duration="120">+2h</button>
+              </div>
+            </div>
+            <div class="action-row">
+              <button type="submit" class="primary-btn" id="gapSubmitBtn">Add gap</button>
+              <button type="button" class="ghost-btn" id="cancelGapEditBtn" hidden>Cancel edit</button>
+            </div>
+            <div class="inline-message" id="gapMessage" aria-live="polite"></div>
+          </div>
+        </form>
+        </div>
+
+        <div class="item-list" id="gapList"></div>
+      </section>
+
+      <section class="panel card" id="step2Panel" data-step-panel="2" hidden>
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">Step 2</div>
+            <h2>Create tasks</h2>
+            <p>Add tasks with a name and a time range (minimum to maximum). The same list is used for every day; step 3 fits them into each day’s gaps.</p>
+          </div>
+        </div>
+
+        <div class="task-tab-shell">
+          <form id="taskForm" class="task-composer" novalidate>
+            <div class="task-composer-top">
+              <div>
+                <div class="composer-kicker">Task composer</div>
+                <h3>Add something worth doing</h3>
+              </div>
+              <div class="composer-accent"></div>
+            </div>
+
+            <div class="task-main-row">
+              <label class="sr-only" for="taskName">Task name</label>
+              <input id="taskName" class="task-name-input" type="text" maxlength="80" placeholder="Add a task" required>
+              <button type="submit" class="primary-btn task-submit">Add task</button>
+            </div>
+
+            <div class="task-time-row">
+              <div class="field-box">
+                <label for="taskMin">Minimum time</label>
+                <input id="taskMin" class="time-input" type="number" min="5" max="360" step="5" value="20">
+              </div>
+              <div class="field-box">
+                <label for="taskMax">Maximum time</label>
+                <input id="taskMax" class="time-input" type="number" min="5" max="360" step="5" value="40">
+              </div>
+            </div>
+
+            <div class="task-note-row">
+              <div class="task-note-pill">Set a range, not an exact duration.</div>
+              <div class="task-note-pill">The preview uses a sensible middle value.</div>
+            </div>
+
+            <div class="inline-message" id="taskMessage" aria-live="polite"></div>
+          </form>
+
+          <aside class="task-sidecard" aria-label="Task overview">
+            <div class="task-side-head">
+              <div>
+                <div class="composer-kicker">Overview</div>
+                <h3>What you have so far</h3>
+              </div>
+            </div>
+
+            <div class="task-side-stats">
+              <div class="task-side-stat">
+                <span>Tasks</span>
+                <strong id="taskCountMeta">0</strong>
+              </div>
+              <div class="task-side-stat">
+                <span>Minimum total</span>
+                <strong id="taskMinMeta">0m</strong>
+              </div>
+              <div class="task-side-stat">
+                <span>Maximum total</span>
+                <strong id="taskMaxMeta">0m</strong>
+              </div>
+            </div>
+
+            <div class="task-side-rail">
+              <div class="task-side-line"></div>
+              <p>Keep ranges realistic so the live schedule stays useful. Wider ranges make the plan feel looser.</p>
+            </div>
+          </aside>
+        </div>
+
+        <div class="item-list" id="taskList"></div>
+      </section>
+
+      <section class="panel card" id="step3Panel" data-step-panel="3" hidden>
+        <div class="section-head section-head-split">
+          <div>
+            <div class="section-kicker">Step 3</div>
+            <h2>Priority and week preview</h2>
+            <p>The grid shows Monday–Sunday (order follows “Week starts” in the left sidebar). Fit checks use the tightest day.</p>
+          </div>
+          <div class="fit-banner-wrap">
+            <div class="fit-banner info" id="fitBanner">Add a gap and a task to start planning.</div>
+            <div class="fit-issues" id="fitIssues" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <div class="step3-grid">
+          <div class="side-stack">
+            <section class="subcard">
+              <div class="sub-head">
+                <h3>Priority</h3>
+                <span>Drag or use arrows</span>
+              </div>
+              <div id="priorityList" class="priority-list"></div>
+            </section>
+
+            <section class="subcard">
+              <div class="sub-head">
+                <h3>Plan style</h3>
+              </div>
+              <div class="style-row" id="stylePicker" role="group" aria-label="Plan style">
+                <button type="button" class="style-chip active" data-style="balanced">Balanced</button>
+                <button type="button" class="style-chip" data-style="compact">Compact</button>
+                <button type="button" class="style-chip" data-style="spread">Spread</button>
+                <button type="button" class="style-chip" data-style="deep">Deep first</button>
+              </div>
+              <label class="check-row">
+                <input type="checkbox" id="keepBuffer" checked>
+                <span>Keep a small free buffer at the end</span>
+              </label>
+            </section>
+          </div>
+
+          <div class="calendar-card">
+            <div class="calendar-head">
+              <div>
+                <h3>Week schedule preview</h3>
+                <p>Each column is a weekday; green is free time, blue is planned tasks for that day.</p>
+              </div>
+              <div class="calendar-legend">
+                <span><i class="legend-gap"></i>Gap</span>
+                <span><i class="legend-task"></i>Task</span>
+              </div>
+            </div>
+
+            <div class="calendar-shell">
+              <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+
+            <div class="preview-summary" id="previewSummary"></div>
+            <div class="unscheduled-list" id="unscheduledList"></div>
+          </div>
+        </div>
+      </section>
+      </div>
+    </main>
+    </div>
+</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
