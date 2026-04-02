@@ -1,6 +1,6 @@
 /** Easy Timetable scheduling constants (no I/O). */
 export const STORAGE_KEY = "easy-timetable-v2";
-/** Prior key; migrated on load in persistence.js. */
+/** Prior key; migrated on load in application/app-state.js. */
 export const LEGACY_STORAGE_KEY = "gapscape-v2";
 export const HOUR_HEIGHT = 64;
 export const WHEEL_ITEM = 48;

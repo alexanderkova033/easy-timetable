@@ -50,6 +50,18 @@ export function computeWeekFitDiagnostics({ gapsByDay, tasks, keepBuffer }) {
 
   const freeTotal = dayDiags.reduce((s, d) => s + d.free, 0);
 
+  let tightestDayIndex = null;
+  let tightestUsable = Infinity;
+  gapsByDay.forEach((gaps, dayIdx) => {
+    if (!gaps.length) return;
+    const u = dayDiags[dayIdx].usable;
+    if (u < tightestUsable) {
+      tightestUsable = u;
+      tightestDayIndex = dayIdx;
+    }
+  });
+  const tightestDayLabel = tightestDayIndex !== null ? DAY_SHORT[tightestDayIndex] : null;
+
   return {
     dayDiags,
     free: freeTotal,
@@ -59,5 +71,8 @@ export function computeWeekFitDiagnostics({ gapsByDay, tasks, keepBuffer }) {
     minNeed,
     maxNeed,
     impossible,
+    tightestDayIndex,
+    tightestDayLabel,
+    tightestUsable: tightestDayIndex !== null ? tightestUsable : null,
   };
 }

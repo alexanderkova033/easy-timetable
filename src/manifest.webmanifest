@@ -1,0 +1,17 @@
+{
+  "name": "Easy Timetable",
+  "short_name": "Timetable",
+  "description": "Plan a week from free-time gaps and tasks — local, no account.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#f6f7fb",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

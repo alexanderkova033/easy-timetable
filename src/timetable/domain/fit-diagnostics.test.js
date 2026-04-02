@@ -23,6 +23,23 @@ describe("computeWeekFitDiagnostics", () => {
     expect(w.impossible.length).toBeGreaterThan(0);
     expect(w.impossible[0].dayLabel).toBe("Mon");
   });
+
+  it("picks tightest day among days that have gaps", () => {
+    const gapsByDay = [
+      [{ startMinutes: 9 * 60, endMinutes: 12 * 60, duration: 180, id: 1, start: "09:00", end: "12:00" }],
+      [{ startMinutes: 9 * 60, endMinutes: 10 * 60, duration: 60, id: 2, start: "09:00", end: "10:00" }],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ];
+    const tasks = [{ id: 1, name: "T", min: 5, max: 10 }];
+    const w = computeWeekFitDiagnostics({ gapsByDay, tasks, keepBuffer: false });
+    expect(w.tightestDayLabel).toBe("Tue");
+    expect(w.tightestDayIndex).toBe(1);
+    expect(w.tightestUsable).toBe(60);
+  });
 });
 
 describe("computeFitDiagnostics", () => {

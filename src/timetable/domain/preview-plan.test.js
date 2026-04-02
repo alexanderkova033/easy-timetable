@@ -49,6 +49,7 @@ describe("preview-plan", () => {
     expect(plan.scheduled.length).toBe(1);
     expect(plan.unscheduled.length).toBe(0);
     expect(plan.scheduled[0].taskName).toBe("A");
+    expect(plan.scheduled[0].taskId).toBe(1);
   });
 
   it("leaves overflow tasks unscheduled", () => {
@@ -63,6 +64,7 @@ describe("preview-plan", () => {
       keepBuffer: false,
     });
     expect(plan.unscheduled.length).toBe(1);
+    expect(plan.unscheduled[0].taskId).toBe(1);
     expect(plan.scheduled.length).toBe(0);
   });
 });

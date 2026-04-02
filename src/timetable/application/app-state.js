@@ -1,8 +1,11 @@
 import { LEGACY_STORAGE_KEY, STORAGE_KEY } from "../domain/constants.js";
+import { normalizePlanWeekMondayISO, mondayISOFOrCurrentWeek } from "../domain/plan-week.js";
+import { normalizeTaskDeadline, normalizeRepeatWeekdays } from "../domain/task-deadlines.js";
 
 const APP_VERSION = 3;
 
 export const BACKGROUND_OPTIONS = [
+  { id: "studio", label: "Studio editorial (light)" },
   { id: "verdant", label: "Verdant grove" },
   { id: "aurora", label: "Aurora mesh" },
   { id: "midnight", label: "Midnight stars" },
@@ -62,10 +65,11 @@ export function migrateToAppState(raw) {
   return sanitizeAppState({
     version: APP_VERSION,
     weekStartsOn: 1,
-    backgroundId: "verdant",
+    backgroundId: "studio",
     fontScale: "md",
     reduceMotion: false,
     accentMotion: true,
+    calendarCompact: false,
     activeProfileId: prof.id,
     profiles: [prof],
   });
@@ -85,7 +89,18 @@ function sanitizeProfile(p) {
     id: p?.id ?? createProfileId(),
     name: typeof p?.name === "string" && p.name.trim() ? p.name.trim() : "Untitled",
     gapsByDay,
-    tasks: Array.isArray(p?.tasks) ? p.tasks : [],
+    tasks: Array.isArray(p?.tasks)
+      ? p.tasks.map(t => {
+          const d = normalizeTaskDeadline(t?.deadline);
+          const next = { ...t };
+          if (d) next.deadline = d;
+          else delete next.deadline;
+          const rw = normalizeRepeatWeekdays(t?.repeatWeekdays);
+          if (rw?.length) next.repeatWeekdays = rw;
+          else delete next.repeatWeekdays;
+          return next;
+        })
+      : [],
     activeStep: Number(p?.activeStep) || 1,
     generationStyle: p?.generationStyle || "balanced",
     keepBuffer: p?.keepBuffer !== false,
@@ -100,10 +115,12 @@ function sanitizeAppState(s) {
   return {
     version: APP_VERSION,
     weekStartsOn: s.weekStartsOn === 0 ? 0 : 1,
-    backgroundId: BACKGROUND_OPTIONS.some((b) => b.id === s.backgroundId) ? s.backgroundId : "verdant",
+    planWeekMonday: normalizePlanWeekMondayISO(s.planWeekMonday) ?? mondayISOFOrCurrentWeek(),
+    backgroundId: BACKGROUND_OPTIONS.some((b) => b.id === s.backgroundId) ? s.backgroundId : "studio",
     fontScale: FONT_SCALES.some((f) => f.id === s.fontScale) ? s.fontScale : "md",
     reduceMotion: !!s.reduceMotion,
     accentMotion: s.accentMotion !== false,
+    calendarCompact: !!s.calendarCompact,
     activeProfileId,
     profiles,
   };
@@ -123,7 +140,7 @@ export function loadAppState() {
       return sanitizeAppState({
         version: APP_VERSION,
         weekStartsOn: 1,
-        backgroundId: "verdant",
+        backgroundId: "studio",
         fontScale: "md",
         reduceMotion: false,
         accentMotion: true,

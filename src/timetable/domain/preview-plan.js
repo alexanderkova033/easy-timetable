@@ -99,15 +99,17 @@ export function buildPreviewPlan({ gaps, tasks, generationStyle, keepBuffer }) {
     const duration = previewDurationForTask(task);
     const segmentIndex = chooseSegmentIndex(segments, duration, style, gapUse);
     if (segmentIndex === -1) {
-      unscheduled.push({ taskName: task.name, duration });
+      unscheduled.push({ taskId: task.id, taskName: task.name, duration });
       return;
     }
     const chosen = segments.splice(segmentIndex, 1)[0];
     const start = placeWithinSegment(chosen, duration, style, index);
     const end = start + duration;
     scheduled.push({
+      taskId: task.id,
       taskName: task.name,
       duration,
+      deadline: task.deadline ?? null,
       startMinutes: start,
       endMinutes: end,
       start: toTime(start),
