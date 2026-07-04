@@ -5,20 +5,20 @@ import {
   MINUTE_VALUES,
   createTaskId,
   clamp,
-} from "../../domain/constants.js";
-import { toTime, formatDuration, parseTimeToMinutes } from "../../domain/time.js";
-import { totalGapMinutes, totalTaskMin, totalTaskMax } from "../../domain/aggregates.js";
-import { normalizeGaps } from "../../domain/gap-rules.js";
-import { normalizeTaskDeadline } from "../../domain/task-deadlines.js";
+} from "../shared/constants.js";
+import { toTime, formatDuration, parseTimeToMinutes } from "../shared/time.js";
+import { totalGapMinutes, totalTaskMin, totalTaskMax } from "../shared/aggregates.js";
+import { normalizeGaps } from "../gaps/gap-rules.js";
+import { normalizeTaskDeadline } from "../tasks/task-deadlines.js";
 import {
   planDayISOForWeekdayIndex,
   formatShortPlanDay,
   normalizePlanWeekMondayISO,
   mondayISOFOrCurrentWeek,
-} from "../../domain/plan-week.js";
-import { computeWeekPreviews, orderedWeekdayIndices } from "../../domain/week-plan.js";
-import { buildICSWeekCalendar, formatWeekPlanPlainText } from "../../domain/week-export.js";
-import { computeWeekFitDiagnostics } from "../../domain/fit-diagnostics.js";
+} from "../week-plan/plan-week.js";
+import { computeWeekPreviews, orderedWeekdayIndices } from "../week-plan/week-plan.js";
+import { buildICSWeekCalendar, formatWeekPlanPlainText } from "../export/week-export.js";
+import { computeWeekFitDiagnostics } from "../week-plan/fit-diagnostics.js";
 import {
   loadAppState,
   persistAppState,
@@ -28,7 +28,7 @@ import {
   migrateToAppState,
   BACKGROUND_OPTIONS,
   FONT_SCALES,
-} from "../../application/app-state.js";
+} from "../app-state.js";
 import { getRoundedNowMinutes } from "../platform/system-clock.js";
 import { escapeHtml } from "../platform/dom-escape.js";
 
@@ -39,8 +39,8 @@ const escapeAttr = s =>
     .replace(/</g, "&lt;")
     .replace(/\r?\n/g, " ")
     .trim();
-import { buildFitIssues } from "../../domain/fit-issues.js";
-import { SCHEDULE_TEMPLATES } from "../../domain/schedule-templates.js";
+import { buildFitIssues } from "../week-plan/fit-issues.js";
+import { SCHEDULE_TEMPLATES } from "../gaps/schedule-templates.js";
 import {
   supportsLinkedJsonFile,
   getLinkedJsonFileHandle,
@@ -54,7 +54,7 @@ import {
   SHARE_HASH_PREFIX,
   MAX_SHARE_URL_CHARS,
 } from "../platform/share-link.js";
-import { normalizeRepeatWeekdays } from "../../domain/task-deadlines.js";
+import { normalizeRepeatWeekdays } from "../tasks/task-deadlines.js";
 
 const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const CALENDAR_COMPACT_HOUR_PX = 40;

@@ -1,4 +1,4 @@
-import { MINUTE_STEP } from "../../domain/constants.js";
+import { MINUTE_STEP } from "../shared/constants.js";
 
 /** Rounded “now” as minutes from midnight (browser clock). */
 export function getRoundedNowMinutes() {

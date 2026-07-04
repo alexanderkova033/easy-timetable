@@ -1,4 +1,4 @@
-import { parseISODateLocal } from "./plan-week.js";
+import { parseISODateLocal } from "../week-plan/plan-week.js";
 
 export function normalizeTaskDeadline(v) {
   if (v == null || v === "") return null;

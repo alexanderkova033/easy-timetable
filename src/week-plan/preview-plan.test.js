@@ -4,7 +4,7 @@ import {
   applyReserve,
   previewDurationForTask,
 } from "./preview-plan.js";
-import { createTaskId } from "./constants.js";
+import { createTaskId } from "../shared/constants.js";
 
 function gap(startH, endH) {
   const startMinutes = startH * 60;

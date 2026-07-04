@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { normalizeGaps } from "./gap-rules.js";
-import { createTaskId } from "./constants.js";
+import { createTaskId } from "../shared/constants.js";
 
 describe("normalizeGaps", () => {
   it("merges overlapping intervals", () => {

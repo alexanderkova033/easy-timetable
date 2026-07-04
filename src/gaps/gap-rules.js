@@ -1,4 +1,4 @@
-import { toTime } from "./time.js";
+import { toTime } from "../shared/time.js";
 
 /**
  * Sorts and merges overlapping gaps; refreshes derived start/end labels.

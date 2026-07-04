@@ -1,5 +1,5 @@
-import { createTaskId } from "./constants.js";
-import { toTime } from "./time.js";
+import { createTaskId } from "../shared/constants.js";
+import { toTime } from "../shared/time.js";
 
 function makeGap(startMinutes, endMinutes) {
   return {

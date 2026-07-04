@@ -1,5 +1,5 @@
 import { buildPreviewPlan } from "./preview-plan.js";
-import { filterTasksForPlanDayAndWeekday } from "./task-deadlines.js";
+import { filterTasksForPlanDayAndWeekday } from "../tasks/task-deadlines.js";
 import { planDayISOForWeekdayIndex, normalizePlanWeekMondayISO } from "./plan-week.js";
 
 /** @param {number} weekStartsOn 0 = Sunday, else Monday */

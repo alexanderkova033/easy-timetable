@@ -52,18 +52,22 @@ Use **Export JSON** in the toolbar. Store the file wherever you like; **Import**
 
 ## Tech notes
 
-- State lives in `localStorage` under the key defined in `src/timetable/domain/constants.js`.
+- State lives in `localStorage` under the key defined in `src/shared/constants.js`.
 - Older saves (single-day shape) are migrated to per-weekday gaps automatically.
 
-## Source layout (screaming + clean architecture)
+## Source layout (screaming architecture)
 
-The **timetable** folder is the app’s bounded context (it should be obvious *what* the software does). Inside it, dependencies point **inward** toward the domain:
+Top-level folders under `src/` are named after what the app *does*, not the technical layer the code sits in — you can tell the app is a scheduler by scanning folder names alone:
 
-| Layer | Path | Role |
-|--------|------|------|
-| **Domain** | `src/timetable/domain/` | Pure scheduling rules: gaps, preview, fit, time—no UI or `localStorage`. |
-| **Application** | `src/timetable/application/` | Use-case orchestration: load/save app state, migrate saves, profile helpers. |
-| **Adapters — web** | `src/timetable/adapters/web/` | Browser delivery: `schedule-app.js`, `timetable.css`. |
-| **Adapters — platform** | `src/timetable/adapters/platform/` | Small browser services (clock, HTML escaping) used by the web adapter. |
+| Folder | Role |
+|--------|------|
+| `src/gaps/` | Free-time gap rules and quick-layout templates. |
+| `src/tasks/` | Task due-date and repeat-weekday rules. |
+| `src/week-plan/` | Turning gaps + tasks into a weekly preview: placement, plan-week dates, fit diagnostics/issues. |
+| `src/export/` | Turning a week preview into `.ics` or plain text. |
+| `src/app-state.js` | Load/save/migrate the whole app state (profiles, backgrounds, font scale) to `localStorage`. |
+| `src/shared/` | Small pure primitives used by several features (time formatting, constants, aggregates). |
+| `src/platform/` | Thin browser-API wrappers (clock, HTML escaping, share links, linked backup file) with no scheduling logic. |
+| `src/ui/` | `schedule-app.js` + `timetable.css` — the single DOM adapter that wires every feature into the page. |
 
-Entry: `src/main.js` → web adapter. Tests stay next to domain modules (`*.test.js`).
+Entry: `index.html` → `src/main.js` → `src/ui/schedule-app.js`. Tests stay next to the module they cover (`*.test.js`).

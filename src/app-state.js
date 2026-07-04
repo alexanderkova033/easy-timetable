@@ -1,6 +1,6 @@
-import { LEGACY_STORAGE_KEY, STORAGE_KEY } from "../domain/constants.js";
-import { normalizePlanWeekMondayISO, mondayISOFOrCurrentWeek } from "../domain/plan-week.js";
-import { normalizeTaskDeadline, normalizeRepeatWeekdays } from "../domain/task-deadlines.js";
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from "./shared/constants.js";
+import { normalizePlanWeekMondayISO, mondayISOFOrCurrentWeek } from "./week-plan/plan-week.js";
+import { normalizeTaskDeadline, normalizeRepeatWeekdays } from "./tasks/task-deadlines.js";
 
 const APP_VERSION = 3;
 

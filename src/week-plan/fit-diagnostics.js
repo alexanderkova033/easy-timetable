@@ -1,4 +1,4 @@
-import { totalGapMinutes, totalTaskMin, totalTaskMax, largestGapMinutes } from "./aggregates.js";
+import { totalGapMinutes, totalTaskMin, totalTaskMax, largestGapMinutes } from "../shared/aggregates.js";
 
 /**
  * Feasibility summary for gaps + tasks (pure).

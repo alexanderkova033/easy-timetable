@@ -1,4 +1,4 @@
-import { planDayISOForWeekdayIndex } from "./plan-week.js";
+import { planDayISOForWeekdayIndex } from "../week-plan/plan-week.js";
 
 const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 

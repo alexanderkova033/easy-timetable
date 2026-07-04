@@ -1,6 +1,6 @@
-import { clamp } from "./constants.js";
-import { toTime } from "./time.js";
-import { totalGapMinutes } from "./aggregates.js";
+import { clamp } from "../shared/constants.js";
+import { toTime } from "../shared/time.js";
+import { totalGapMinutes } from "../shared/aggregates.js";
 
 export function applyReserve(gaps, keepBuffer) {
   const total = totalGapMinutes(gaps);

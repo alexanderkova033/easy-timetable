@@ -1,4 +1,4 @@
-import { formatDuration } from "./time.js";
+import { formatDuration } from "../shared/time.js";
 
 /**
  * Build human-readable issues + fix hints for the fit banner / detail panel.
