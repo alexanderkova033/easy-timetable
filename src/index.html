@@ -202,7 +202,7 @@
           <div>
             <div class="section-kicker">Step 1 · Start here</div>
             <h2>Set your free time by day</h2>
-            <p>Welcome — this is your home base. Pick a weekday, set gaps with the time rings or a quick template, then move on to tasks and the week preview. Everything stays in your browser.</p>
+            <p>Pick a weekday and add your free-time gaps.</p>
           </div>
         </div>
 
@@ -317,7 +317,7 @@
           <div>
             <div class="section-kicker">Step 2</div>
             <h2>Create tasks</h2>
-            <p>Add tasks with a name, an optional due date, and a session-length range (minimum to maximum minutes). After a due date, the preview stops placing that task — set <strong>Plan week (Monday)</strong> under Look &amp; week so columns match real days. The same task list is used for every day; step 3 fits it into each day’s gaps.</p>
+            <p>Add a name, a due date if you need one, and how long each session takes.</p>
           </div>
         </div>
 
@@ -363,45 +363,10 @@
                 <button type="button" class="ghost-btn task-repeat-all" id="taskRepeatAllBtn">All days</button>
               </div>
               <div class="task-repeat-chips" id="taskRepeatChips" role="group" aria-labelledby="taskRepeatChipsLabel"></div>
-              <p class="task-repeat-hint">Limit which columns use this task. Due date still sets the last day it can appear.</p>
-            </div>
-
-            <div class="task-note-row">
-              <div class="task-note-pill">Due dates need Plan week (Look &amp; week); after that day the task drops from later preview columns.</div>
-              <div class="task-note-pill">Session length is a min–max range; the preview uses a sensible middle, not a single fixed time.</div>
             </div>
 
             <div class="inline-message" id="taskMessage" aria-live="polite"></div>
           </form>
-
-          <aside class="task-sidecard" aria-label="Task overview">
-            <div class="task-side-head">
-              <div>
-                <div class="composer-kicker">Overview</div>
-                <h3>What you have so far</h3>
-              </div>
-            </div>
-
-            <div class="task-side-stats">
-              <div class="task-side-stat">
-                <span>Tasks</span>
-                <strong id="taskCountMeta">0</strong>
-              </div>
-              <div class="task-side-stat">
-                <span>Minimum total</span>
-                <strong id="taskMinMeta">0m</strong>
-              </div>
-              <div class="task-side-stat">
-                <span>Maximum total</span>
-                <strong id="taskMaxMeta">0m</strong>
-              </div>
-            </div>
-
-            <div class="task-side-rail">
-              <div class="task-side-line"></div>
-              <p>Set Plan week (Monday) in the sidebar when you use due dates. Keep min–max minutes realistic so the live schedule stays useful — wider ranges feel looser.</p>
-            </div>
-          </aside>
         </div>
 
         <div class="item-list" id="taskList"></div>
@@ -412,7 +377,7 @@
           <div>
             <div class="section-kicker">Step 3</div>
             <h2>Priority and week preview</h2>
-            <p>The grid shows Monday–Sunday (order follows “Week starts”) with dates from Plan week. Fit checks use the tightest day. Tasks with a due date only appear in columns on or before that date.</p>
+            <p>Reorder by priority and preview your week.</p>
           </div>
           <div class="fit-banner-wrap">
             <div class="fit-banner info" id="fitBanner">Add a gap and a task to start planning.</div>
@@ -490,38 +455,6 @@
     </main>
     </div>
 
-    <section class="app-footer-secondary card wrap" aria-labelledby="footerBackupHeading">
-      <div class="app-footer-secondary-inner">
-        <h2 id="footerBackupHeading" class="app-footer-heading">Backup &amp; tips</h2>
-        <p class="app-footer-lead">Exports and share links are optional — your work stays in this browser until you use them.</p>
-        <div class="hero-trust-card" aria-label="Back up your data">
-          <div class="hero-trust-head">
-            <span class="hero-trust-badge" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-            </span>
-            <div class="hero-trust-text">
-              <p class="hero-trust-title">Your plan stays on this device</p>
-              <p class="hero-trust-copy">Nothing is uploaded. <strong>Export</strong> a JSON backup often, or use a <strong>share link</strong> to open the same data elsewhere. Chromium browsers can <strong>link a file</strong> so saves mirror automatically.</p>
-            </div>
-          </div>
-          <div class="hero-trust-actions" role="group" aria-label="Quick backup actions">
-            <button type="button" class="trust-chip trust-chip--primary" id="heroQuickExport">Export JSON</button>
-            <button type="button" class="trust-chip" id="heroQuickImport">Import</button>
-            <button type="button" class="trust-chip" id="heroQuickShare">Copy share link</button>
-            <button type="button" class="trust-chip trust-chip--optional" id="heroQuickLinkFile" hidden>Link backup file</button>
-          </div>
-        </div>
-        <div class="hero-footer-meta">
-          <p class="hero-save-status" id="saveStatus" aria-live="polite">Saved locally</p>
-          <p class="hero-linked-row" id="linkedSaveRow" hidden>
-            <span class="hero-linked-pill" id="linkedSaveLabel" aria-live="polite">Backup file linked — saves mirror there.</span>
-            <button type="button" class="soft-btn soft-btn-tiny danger-ghost" id="unlinkSaveBtn">Unlink file</button>
-          </p>
-          <button type="button" class="soft-btn soft-btn-ghost how-it-works-btn" id="openOnboardingBtn">How it works</button>
-        </div>
-      </div>
-    </section>
-
     <div class="app-toast" id="appToast" role="status" aria-live="polite" aria-atomic="true" hidden>
       <span class="app-toast-text" id="appToastText"></span>
       <button type="button" class="soft-btn app-toast-action" id="appToastAction" hidden>Undo</button>
@@ -531,7 +464,7 @@
   <dialog id="onboardingDialog" class="onboarding-dialog" aria-labelledby="onboardingTitle">
     <div class="onboarding-inner">
       <h2 id="onboardingTitle" class="onboarding-title">Plan your week in about a minute</h2>
-      <p class="onboarding-lead">Define <strong>when you’re free</strong> (gaps), list <strong>what to do</strong>, then let the app <strong>drop tasks into those gaps</strong> — no fighting the clock for every single minute.</p>
+      <p class="onboarding-lead">Set your free time, add tasks, and let the app schedule them.</p>
       <div class="onboarding-flow" aria-hidden="true">
         <div class="onboarding-flow-track">
           <span class="onboarding-flow-node"><span class="onboarding-flow-no">1</span><span class="onboarding-flow-label">Time</span></span>
@@ -540,14 +473,8 @@
           <span class="onboarding-flow-arrow">→</span>
           <span class="onboarding-flow-node"><span class="onboarding-flow-no">3</span><span class="onboarding-flow-label">Plan</span></span>
         </div>
-        <p class="onboarding-flow-caption">Then drag priority and watch the Mon–Sun grid update.</p>
       </div>
-      <ol class="onboarding-steps">
-        <li><span class="onboarding-step-no">1</span> <strong>Time</strong> — Free-time gaps per weekday; templates and copy-from-day save taps.</li>
-        <li><span class="onboarding-step-no">2</span> <strong>Tasks</strong> — One list for all days; optional due dates and min–max minutes per session.</li>
-        <li><span class="onboarding-step-no">3</span> <strong>Plan</strong> — Reorder by priority, pick a style; preview shows green gaps and blue work blocks.</li>
-      </ol>
-      <p class="onboarding-foot">Your data never leaves this browser unless you choose: <strong>Export JSON</strong>, <strong>copy share link</strong>, download <strong>.ics</strong> in step 3, or <strong>link a backup file</strong> (Chrome / Edge / Brave).</p>
+      <p class="onboarding-foot">Your data stays in this browser unless you export it.</p>
       <label class="onboarding-dont">
         <input type="checkbox" id="onboardingDontShow" />
         <span>Don’t show this again when I open the app</span>
