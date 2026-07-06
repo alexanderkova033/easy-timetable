@@ -4,7 +4,7 @@ import {
   createTaskId,
   clamp,
 } from "../shared/constants.js";
-import { toTime, formatDuration, parseTimeToMinutes } from "../shared/time.js";
+import { toTime, formatDuration } from "../shared/time.js";
 import { totalGapMinutes, totalTaskMin, totalTaskMax } from "../shared/aggregates.js";
 import { normalizeGaps } from "../gaps/gap-rules.js";
 import { normalizeTaskDeadline } from "../tasks/task-deadlines.js";
@@ -27,7 +27,6 @@ import {
   BACKGROUND_OPTIONS,
   FONT_SCALES,
 } from "../app-state.js";
-import { getRoundedNowMinutes } from "../platform/system-clock.js";
 import { escapeHtml } from "../platform/dom-escape.js";
 
 const escapeAttr = s =>
@@ -111,18 +110,13 @@ export function bootstrapTimetableApp() {
   const els = {
     stepButtons: [...document.querySelectorAll(".step-btn")],
     stepPanels: [...document.querySelectorAll("[data-step-panel]")],
-    gapRangeReadout: document.getElementById("gapRangeReadout"),
     dayTimeline: document.getElementById("dayTimeline"),
     dayTimelineRail: document.getElementById("dayTimelineRail"),
     dayTimelineLines: document.getElementById("dayTimelineLines"),
     dayTimelineTrack: document.getElementById("dayTimelineTrack"),
-    dayTimelineGhost: document.getElementById("dayTimelineGhost"),
     dayTimelineDayLabel: document.getElementById("dayTimelineDayLabel"),
-    gapForm: document.getElementById("gapForm"),
-    useNowBtn: document.getElementById("useNowBtn"),
-    gapSubmitBtn: document.getElementById("gapSubmitBtn"),
-    cancelGapEditBtn: document.getElementById("cancelGapEditBtn"),
-    gapMessage: document.getElementById("gapMessage"),
+    dayTimelineShell: document.getElementById("dayTimelineShell"),
+    weekTimeline: document.getElementById("weekTimeline"),
     gapList: document.getElementById("gapList"),
     taskForm: document.getElementById("taskForm"),
     taskName: document.getElementById("taskName"),
@@ -166,8 +160,6 @@ export function bootstrapTimetableApp() {
     continueStep12: document.getElementById("continueStep12"),
     continueStep23: document.getElementById("continueStep23"),
     weekStrip: document.getElementById("weekStrip"),
-    gapStartInput: document.getElementById("gapStartInput"),
-    gapEndInput: document.getElementById("gapEndInput"),
     taskSubmitBtn: document.getElementById("taskSubmitBtn"),
     cancelTaskEditBtn: document.getElementById("cancelTaskEditBtn"),
     taskDeadline: document.getElementById("taskDeadline"),
@@ -393,26 +385,7 @@ export function bootstrapTimetableApp() {
   };
 
   const state = {
-    draftGap: { start: 9 * 60, end: 10 * 60 },
-    editingGapId: null,
     editingTaskId: null,
-    syncingGapInputs: false,
-    defaultGapDuration: 30,
-  };
-
-  const syncDraftDisplays = () => {
-    const [sh, sm] = toTime(state.draftGap.start).split(":");
-    const [eh, em] = toTime(state.draftGap.end).split(":");
-    if (els.gapRangeReadout) {
-      els.gapRangeReadout.textContent = `Free for ${formatDuration(state.draftGap.end - state.draftGap.start)}`;
-    }
-    state.syncingGapInputs = true;
-    try {
-      if (els.gapStartInput) els.gapStartInput.value = `${sh}:${sm}`;
-      if (els.gapEndInput) els.gapEndInput.value = `${eh}:${em}`;
-    } finally {
-      state.syncingGapInputs = false;
-    }
   };
 
   const updateTaskRangeReadout = () => {
@@ -485,56 +458,46 @@ export function bootstrapTimetableApp() {
     return ` · ${rw.map(i => DAY_SHORT[i]).join(", ")}`;
   };
 
-  const ensureDraftGapOrder = changedTarget => {
-    if (state.draftGap.end <= state.draftGap.start) {
-      if (changedTarget === "start") {
-        state.draftGap.end = clamp(
-          state.draftGap.start + 30,
-          MINUTE_STEP,
-          24 * 60 - MINUTE_STEP,
-        );
-      } else {
-        state.draftGap.start = clamp(state.draftGap.end - 30, 0, 24 * 60 - MINUTE_STEP);
-      }
-    }
-  };
+  const DAY_TIMELINE_TOTAL_HEIGHT = 24 * HOUR_HEIGHT;
+  const DEFAULT_GAP_DURATION = 30;
+  let timelineMode = "day";
 
-  const DAY_TIMELINE_MIN_HOUR_SPAN = 2;
+  const gapsForDay = dayIdx => profile().gapsByDay[dayIdx];
 
-  const getDayTimelineRange = () => {
-    const gaps = editingGaps();
-    if (!gaps.length) return { startHour: 6, endHour: 23 };
-    const values = [];
-    gaps.forEach(g => values.push(g.startMinutes, g.endMinutes));
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    return {
-      startHour: clamp(Math.floor(min / 60) - 1, 0, 24 - DAY_TIMELINE_MIN_HOUR_SPAN),
-      endHour: clamp(Math.ceil(max / 60) + 1, DAY_TIMELINE_MIN_HOUR_SPAN, 24),
-    };
-  };
-
-  const dayTimelineMinutesFromClientY = (clientY, startHour) => {
-    const track = els.dayTimelineTrack;
-    if (!track) return 0;
-    const rect = track.getBoundingClientRect();
-    const raw = startHour * 60 + ((clientY - rect.top) / HOUR_HEIGHT) * 60;
+  const dayTimelineMinutesFromClientY = (clientY, trackEl) => {
+    const rect = trackEl.getBoundingClientRect();
+    const raw = ((clientY - rect.top) / HOUR_HEIGHT) * 60;
     return clamp(Math.round(raw / MINUTE_STEP) * MINUTE_STEP, 0, 24 * 60);
+  };
+
+  const dayTimelineBlockHtml = gap => {
+    const top = (gap.startMinutes / 60) * HOUR_HEIGHT;
+    const height = Math.max(20, ((gap.endMinutes - gap.startMinutes) / 60) * HOUR_HEIGHT);
+    return `
+      <div class="calendar-block gap day-timeline-block" data-gap-id="${gap.id}" style="top:${top}px;height:${height}px;">
+        <div class="day-timeline-handle day-timeline-handle-top" data-handle="start" aria-hidden="true"></div>
+        <div class="day-timeline-block-body">
+          <span class="day-timeline-block-time">${gap.start} – ${gap.end}</span>
+          <span class="day-timeline-block-duration">${formatDuration(gap.duration)}</span>
+        </div>
+        <button type="button" class="day-timeline-block-remove" data-gap-delete="${gap.id}" title="Remove" aria-label="Remove gap">×</button>
+        <div class="day-timeline-handle day-timeline-handle-bottom" data-handle="end" aria-hidden="true"></div>
+      </div>`;
+  };
+
+  const bindDayTimelineTrack = track => {
+    track.addEventListener("pointerdown", onDayTimelinePointerDown);
   };
 
   const renderDayTimeline = () => {
     if (!els.dayTimeline || !els.dayTimelineTrack) return;
-    if (els.dayTimelineDayLabel) els.dayTimelineDayLabel.textContent = DAY_SHORT[activeEditDay];
-
-    const { startHour, endHour } = getDayTimelineRange();
-    const totalHeight = (endHour - startHour) * HOUR_HEIGHT;
-    els.dayTimeline.style.height = `${totalHeight}px`;
+    els.dayTimeline.style.height = `${DAY_TIMELINE_TOTAL_HEIGHT}px`;
 
     const labels = [];
     const lines = [];
-    for (let hour = startHour; hour <= endHour; hour += 1) {
-      const top = (hour - startHour) * HOUR_HEIGHT;
-      if (hour < endHour) {
+    for (let hour = 0; hour <= 24; hour += 1) {
+      const top = hour * HOUR_HEIGHT;
+      if (hour < 24) {
         labels.push(`<div class="time-label" style="top:${top}px">${String(hour).padStart(2, "0")}:00</div>`);
       }
       lines.push(`<div class="hour-line" style="top:${top}px"></div>`);
@@ -542,30 +505,88 @@ export function bootstrapTimetableApp() {
     if (els.dayTimelineRail) els.dayTimelineRail.innerHTML = labels.join("");
     if (els.dayTimelineLines) els.dayTimelineLines.innerHTML = lines.join("");
 
-    const gaps = editingGaps();
-    els.dayTimelineTrack.innerHTML = gaps
-      .map(gap => {
-        const top = ((gap.startMinutes - startHour * 60) / 60) * HOUR_HEIGHT;
-        const height = Math.max(20, ((gap.endMinutes - gap.startMinutes) / 60) * HOUR_HEIGHT);
-        const editing = gap.id === state.editingGapId ? " editing" : "";
-        return `
-        <div class="calendar-block gap day-timeline-block${editing}" data-gap-id="${gap.id}" style="top:${top}px;height:${height}px;">
-          <div class="day-timeline-handle day-timeline-handle-top" data-handle="start" aria-hidden="true"></div>
-          <div class="day-timeline-block-body">
-            <span class="day-timeline-block-time">${gap.start} – ${gap.end}</span>
-            <span class="day-timeline-block-duration">${formatDuration(gap.duration)}</span>
-          </div>
-          <button type="button" class="day-timeline-block-remove" data-gap-delete="${gap.id}" title="Remove" aria-label="Remove gap">×</button>
-          <div class="day-timeline-handle day-timeline-handle-bottom" data-handle="end" aria-hidden="true"></div>
-        </div>`;
-      })
-      .join("");
+    els.dayTimelineTrack.dataset.dayIdx = String(activeEditDay);
+    els.dayTimelineTrack.innerHTML = gapsForDay(activeEditDay).map(dayTimelineBlockHtml).join("");
   };
 
-  const positionDayTimelineBlock = (gapId, start, end, startHour) => {
-    const el = els.dayTimelineTrack?.querySelector(`.day-timeline-block[data-gap-id="${gapId}"]`);
+  const renderWeekTimeline = () => {
+    if (!els.weekTimeline) return;
+    const order = orderedDayIndices();
+    const heads = order.map(dayIdx => `<div class="week-col-head-static">${DAY_SHORT[dayIdx]}</div>`).join("");
+
+    const labels = [];
+    const lines = [];
+    for (let hour = 0; hour <= 24; hour += 1) {
+      const top = hour * HOUR_HEIGHT;
+      if (hour < 24) {
+        labels.push(`<div class="time-label" style="top:${top}px">${String(hour).padStart(2, "0")}:00</div>`);
+      }
+      lines.push(`<div class="hour-line week-hour-line" style="top:${top}px"></div>`);
+    }
+
+    const columns = order
+      .map(
+        dayIdx => `
+        <div class="week-col">
+          <div class="week-col-track day-timeline-track" data-day-idx="${dayIdx}" style="height:${DAY_TIMELINE_TOTAL_HEIGHT}px">
+            ${gapsForDay(dayIdx).map(dayTimelineBlockHtml).join("")}
+          </div>
+        </div>`,
+      )
+      .join("");
+
+    els.weekTimeline.innerHTML = `
+      <div class="calendar-week-head">
+        <div class="week-corner" aria-hidden="true"></div>
+        ${heads}
+      </div>
+      <div class="calendar-week-grid" style="min-height:${DAY_TIMELINE_TOTAL_HEIGHT}px">
+        <div class="time-rail">${labels.join("")}</div>
+        <div class="week-columns-wrap" style="height:${DAY_TIMELINE_TOTAL_HEIGHT}px">
+          <div class="week-hour-lines">${lines.join("")}</div>
+          <div class="week-columns">${columns}</div>
+        </div>
+      </div>
+    `;
+    els.weekTimeline.querySelectorAll(".day-timeline-track").forEach(bindDayTimelineTrack);
+  };
+
+  const updateTimelineModeButtons = () => {
+    document.querySelectorAll("[data-timeline-mode]").forEach(button => {
+      button.classList.toggle("active", button.dataset.timelineMode === timelineMode);
+    });
+  };
+
+  const renderTimeline = () => {
+    const isWeek = timelineMode === "week";
+    if (els.dayTimeline) els.dayTimeline.hidden = isWeek;
+    if (els.weekTimeline) els.weekTimeline.hidden = !isWeek;
+    if (els.dayTimelineDayLabel) {
+      els.dayTimelineDayLabel.textContent = isWeek ? "Free time — Week" : `Free time — ${DAY_SHORT[activeEditDay]}`;
+    }
+    if (isWeek) renderWeekTimeline();
+    else renderDayTimeline();
+    updateTimelineModeButtons();
+  };
+
+  const setTimelineMode = mode => {
+    if (mode === timelineMode) return;
+    timelineMode = mode;
+    const card = els.dayTimeline?.closest(".day-timeline-card");
+    card?.classList.remove("mode-pop");
+    void card?.offsetWidth;
+    card?.classList.add("mode-pop");
+    renderTimeline();
+  };
+
+  const scrollTimelineToDefaultHour = (hour = 7) => {
+    if (els.dayTimelineShell) els.dayTimelineShell.scrollTop = hour * HOUR_HEIGHT - 24;
+  };
+
+  const positionDayTimelineBlock = (trackEl, gapId, start, end) => {
+    const el = trackEl.querySelector(`.day-timeline-block[data-gap-id="${gapId}"]`);
     if (!el) return;
-    const top = ((start - startHour * 60) / 60) * HOUR_HEIGHT;
+    const top = (start / 60) * HOUR_HEIGHT;
     const height = Math.max(20, ((end - start) / 60) * HOUR_HEIGHT);
     el.style.top = `${top}px`;
     el.style.height = `${height}px`;
@@ -575,24 +596,44 @@ export function bootstrapTimetableApp() {
     if (durEl) durEl.textContent = formatDuration(end - start);
   };
 
-  const showDayTimelineGhost = (start, end, startHour) => {
-    const ghost = els.dayTimelineGhost;
-    if (!ghost) return;
-    const top = ((start - startHour * 60) / 60) * HOUR_HEIGHT;
+  const updateTimelineGhost = (ghostEl, start, end) => {
+    const top = (start / 60) * HOUR_HEIGHT;
     const height = Math.max(20, ((end - start) / 60) * HOUR_HEIGHT);
-    ghost.style.top = `${top}px`;
-    ghost.style.height = `${height}px`;
-    ghost.hidden = false;
-    ghost.textContent = `${toTime(start)} – ${toTime(end)} · ${formatDuration(end - start)}`;
+    ghostEl.style.top = `${top}px`;
+    ghostEl.style.height = `${height}px`;
+    ghostEl.textContent = `${toTime(start)} – ${toTime(end)} · ${formatDuration(end - start)}`;
   };
 
-  const hideDayTimelineGhost = () => {
-    if (els.dayTimelineGhost) els.dayTimelineGhost.hidden = true;
+  const flashDayTimelineBlock = gapId => {
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`.day-timeline-block[data-gap-id="${gapId}"]`);
+      if (!el) return;
+      el.classList.add("just-committed");
+      el.addEventListener("animationend", () => el.classList.remove("just-committed"), { once: true });
+    });
+  };
+
+  const commitGap = (dayIdx, gapId, start, end) => {
+    if (end <= start) return;
+    const gaps = profile().gapsByDay[dayIdx];
+    const base = gaps.filter(gap => gap.id !== gapId);
+    base.push({
+      id: gapId || createTaskId(),
+      startMinutes: start,
+      endMinutes: end,
+      start: toTime(start),
+      end: toTime(end),
+      duration: end - start,
+    });
+    profile().gapsByDay[dayIdx] = normalizeGaps(base);
+    const committed = profile().gapsByDay[dayIdx].find(g => g.startMinutes <= start && g.endMinutes >= end);
+    refreshEverything();
+    if (committed) flashDayTimelineBlock(committed.id);
   };
 
   const onDayTimelinePointerMove = event => {
     if (!dayTimelineDrag) return;
-    const minutes = dayTimelineMinutesFromClientY(event.clientY, dayTimelineDrag.startHour);
+    const minutes = dayTimelineMinutesFromClientY(event.clientY, dayTimelineDrag.trackEl);
 
     if (dayTimelineDrag.mode === "create") {
       const start = Math.min(dayTimelineDrag.anchorMinutes, minutes);
@@ -600,7 +641,7 @@ export function bootstrapTimetableApp() {
       dayTimelineDrag.previewStart = start;
       dayTimelineDrag.previewEnd = end;
       if (Math.abs(minutes - dayTimelineDrag.anchorMinutes) >= MINUTE_STEP) dayTimelineDrag.moved = true;
-      showDayTimelineGhost(start, end, dayTimelineDrag.startHour);
+      updateTimelineGhost(dayTimelineDrag.ghostEl, start, end);
       return;
     }
 
@@ -625,7 +666,7 @@ export function bootstrapTimetableApp() {
 
     dayTimelineDrag.previewStart = newStart;
     dayTimelineDrag.previewEnd = newEnd;
-    positionDayTimelineBlock(dayTimelineDrag.gapId, newStart, newEnd, dayTimelineDrag.startHour);
+    positionDayTimelineBlock(dayTimelineDrag.trackEl, dayTimelineDrag.gapId, newStart, newEnd);
   };
 
   const onDayTimelinePointerUp = () => {
@@ -634,82 +675,80 @@ export function bootstrapTimetableApp() {
     dayTimelineDrag = null;
     if (!drag) return;
 
-    els.dayTimelineTrack?.classList.remove("is-dragging");
+    drag.trackEl.classList.remove("is-dragging");
 
     if (drag.mode === "create") {
-      hideDayTimelineGhost();
+      drag.ghostEl?.remove();
       let start = drag.previewStart;
       let end = drag.previewEnd;
       if (!drag.moved) {
         start = drag.anchorMinutes;
-        end = clamp(start + state.defaultGapDuration, start + MINUTE_STEP, 24 * 60);
+        end = clamp(start + DEFAULT_GAP_DURATION, start + MINUTE_STEP, 24 * 60);
       }
-      state.editingGapId = null;
-      state.draftGap.start = start;
-      state.draftGap.end = end;
-      addOrUpdateGap();
+      commitGap(drag.dayIdx, null, start, end);
       return;
     }
 
-    const el = els.dayTimelineTrack?.querySelector(`.day-timeline-block[data-gap-id="${drag.gapId}"]`);
+    const el = drag.trackEl.querySelector(`.day-timeline-block[data-gap-id="${drag.gapId}"]`);
     el?.classList.remove("dragging");
 
-    if (!drag.moved) {
-      editGap(drag.gapId, { scroll: false });
-      return;
-    }
+    if (!drag.moved) return;
 
-    state.editingGapId = drag.gapId;
-    state.draftGap.start = drag.previewStart;
-    state.draftGap.end = drag.previewEnd;
-    addOrUpdateGap();
+    commitGap(drag.dayIdx, drag.gapId, drag.previewStart, drag.previewEnd);
   };
 
   const onDayTimelinePointerDown = event => {
     if (event.button !== undefined && event.button !== 0) return;
-    const track = els.dayTimelineTrack;
-    if (!track) return;
+    const track = event.currentTarget;
     if (event.target.closest(".day-timeline-block-remove")) return;
 
-    const { startHour } = getDayTimelineRange();
+    const dayIdx = Number(track.dataset.dayIdx);
+    const gaps = gapsForDay(dayIdx);
     const blockEl = event.target.closest(".day-timeline-block");
     const handleEl = event.target.closest(".day-timeline-handle");
-    const pointerMinutes = dayTimelineMinutesFromClientY(event.clientY, startHour);
+    const pointerMinutes = dayTimelineMinutesFromClientY(event.clientY, track);
 
     if (blockEl && handleEl) {
       const gapId = Number(blockEl.dataset.gapId);
-      const gap = editingGaps().find(g => g.id === gapId);
+      const gap = gaps.find(g => g.id === gapId);
       if (!gap) return;
       dayTimelineDrag = {
         mode: handleEl.dataset.handle === "start" ? "resize-start" : "resize-end",
+        dayIdx,
+        trackEl: track,
         gapId,
-        startHour,
         original: { start: gap.startMinutes, end: gap.endMinutes },
         moved: false,
       };
       blockEl.classList.add("dragging");
     } else if (blockEl) {
       const gapId = Number(blockEl.dataset.gapId);
-      const gap = editingGaps().find(g => g.id === gapId);
+      const gap = gaps.find(g => g.id === gapId);
       if (!gap) return;
       dayTimelineDrag = {
         mode: "move",
+        dayIdx,
+        trackEl: track,
         gapId,
-        startHour,
         original: { start: gap.startMinutes, end: gap.endMinutes },
         pointerStartMinutes: pointerMinutes,
         moved: false,
       };
       blockEl.classList.add("dragging");
     } else {
+      const ghost = document.createElement("div");
+      ghost.className = "day-timeline-ghost";
+      track.appendChild(ghost);
       dayTimelineDrag = {
         mode: "create",
-        startHour,
+        dayIdx,
+        trackEl: track,
+        ghostEl: ghost,
         anchorMinutes: pointerMinutes,
         moved: false,
       };
       track.classList.add("is-dragging");
-      showDayTimelineGhost(pointerMinutes, pointerMinutes + MINUTE_STEP, startHour);
+      updateTimelineGhost(ghost, pointerMinutes, pointerMinutes + MINUTE_STEP);
     }
 
     event.preventDefault();
@@ -717,90 +756,11 @@ export function bootstrapTimetableApp() {
     window.addEventListener("pointerup", onDayTimelinePointerUp, { once: true });
   };
 
-  const applyGapDuration = duration => {
-    state.draftGap.end = clamp(
-      state.draftGap.start + duration,
-      MINUTE_STEP,
-      24 * 60 - MINUTE_STEP,
-    );
-    ensureDraftGapOrder("end");
-    state.defaultGapDuration = duration;
-    syncDraftDisplays();
-    document.querySelectorAll("[data-gap-duration]").forEach(button => {
-      button.classList.toggle("active", Number(button.dataset.gapDuration) === duration);
-    });
-  };
-
-  const useCurrentTime = () => {
-    state.draftGap.start = clamp(getRoundedNowMinutes(), 0, 24 * 60 - MINUTE_STEP);
-    state.draftGap.end = clamp(state.draftGap.start + 60, MINUTE_STEP, 24 * 60 - MINUTE_STEP);
-    syncDraftDisplays();
-  };
-
-  const resetGapComposer = () => {
-    state.editingGapId = null;
-    state.draftGap.start = 9 * 60;
-    state.draftGap.end = 10 * 60;
-    els.gapSubmitBtn.textContent = "Add gap";
-    els.cancelGapEditBtn.hidden = true;
-    clearMessage(els.gapMessage);
-    applyGapDuration(30);
-    renderDayTimeline();
-  };
-
-  const addOrUpdateGap = () => {
-    const { start, end } = state.draftGap;
-    if (end <= start) {
-      setMessage(els.gapMessage, "End time must be after start time.", "error");
-      return;
-    }
-
-    const base = editingGaps().filter(gap => gap.id !== state.editingGapId);
-    base.push({
-      id: state.editingGapId || createTaskId(),
-      startMinutes: start,
-      endMinutes: end,
-      start: toTime(start),
-      end: toTime(end),
-      duration: end - start,
-    });
-
-    const before = base.length;
-    profile().gapsByDay[activeEditDay] = normalizeGaps(base);
-    const mergedCount = before - profile().gapsByDay[activeEditDay].length;
-    setMessage(
-      els.gapMessage,
-      state.editingGapId
-        ? "Gap updated."
-        : mergedCount > 0
-          ? "Gap added and overlapping gaps were merged."
-          : "Gap added.",
-      "success",
-    );
-
-    refreshEverything();
-    resetGapComposer();
-  };
-
-  const editGap = (id, { scroll = true } = {}) => {
-    const gap = editingGaps().find(item => item.id === id);
-    if (!gap) return;
-    state.editingGapId = id;
-    state.draftGap.start = gap.startMinutes;
-    state.draftGap.end = gap.endMinutes;
-    els.gapSubmitBtn.textContent = "Save gap";
-    els.cancelGapEditBtn.hidden = false;
-    clearMessage(els.gapMessage);
-    syncDraftDisplays();
-    renderDayTimeline();
-    setActiveStep(1);
-    if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   const removeGap = id => {
-    pushUndo({ kind: "gapsDay", day: activeEditDay, gaps: cloneGaps(editingGaps()) });
-    profile().gapsByDay[activeEditDay] = editingGaps().filter(gap => gap.id !== id);
-    if (state.editingGapId === id) resetGapComposer();
+    const dayIdx = profile().gapsByDay.findIndex(dayGaps => dayGaps.some(gap => gap.id === id));
+    if (dayIdx === -1) return;
+    pushUndo({ kind: "gapsDay", day: dayIdx, gaps: cloneGaps(profile().gapsByDay[dayIdx]) });
+    profile().gapsByDay[dayIdx] = profile().gapsByDay[dayIdx].filter(gap => gap.id !== id);
     refreshEverything();
   };
 
@@ -846,7 +806,6 @@ export function bootstrapTimetableApp() {
             <div class="item-meta">${formatDuration(gap.duration)}</div>
           </div>
           <div class="item-actions">
-            <button type="button" class="item-action" data-gap-edit="${gap.id}">Edit</button>
             <button type="button" class="item-action" data-gap-dup="${gap.id}">Duplicate</button>
             <button type="button" class="item-action danger" data-gap-delete="${gap.id}">Remove</button>
           </div>
@@ -1473,7 +1432,7 @@ export function bootstrapTimetableApp() {
     renderWeekStrip();
     renderToolbar();
     renderGaps();
-    renderDayTimeline();
+    renderTimeline();
     renderBulkApplyBar();
     renderTasks();
     renderTaskMeta();
@@ -1649,7 +1608,6 @@ export function bootstrapTimetableApp() {
         app = next;
         activeEditDay = 0;
         applyChrome();
-        resetGapComposer();
         setActiveStep(profile().activeStep || 1);
         refreshEverything();
         const activeName = getActiveProfile(app).name;
@@ -1735,13 +1693,12 @@ export function bootstrapTimetableApp() {
       const scrollComposer = event.target.closest("[data-scroll-to-gap-composer]");
       if (scrollComposer) {
         els.dayTimeline?.scrollIntoView({ behavior: "smooth", block: "center" });
-        els.gapStartInput?.focus({ preventScroll: true });
         return;
       }
 
-      const durationButton = event.target.closest("[data-gap-duration]");
-      if (durationButton) {
-        applyGapDuration(Number(durationButton.dataset.gapDuration));
+      const modeButton = event.target.closest("[data-timeline-mode]");
+      if (modeButton) {
+        setTimelineMode(modeButton.dataset.timelineMode);
         return;
       }
 
@@ -1752,12 +1709,6 @@ export function bootstrapTimetableApp() {
           btn.classList.toggle("active", btn.dataset.style === profile().generationStyle);
         });
         refreshEverything();
-        return;
-      }
-
-      const gapEdit = event.target.closest("[data-gap-edit]");
-      if (gapEdit) {
-        editGap(Number(gapEdit.dataset.gapEdit));
         return;
       }
 
@@ -1796,7 +1747,6 @@ export function bootstrapTimetableApp() {
       const editGapsDay = event.target.closest("[data-edit-gaps-day]");
       if (editGapsDay) {
         activeEditDay = Number(editGapsDay.dataset.editGapsDay);
-        resetGapComposer();
         setActiveStep(1);
         refreshEverything();
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1820,10 +1770,10 @@ export function bootstrapTimetableApp() {
       const dayTab = event.target.closest("[data-edit-day]");
       if (dayTab && dayTab.closest("#weekStrip")) {
         activeEditDay = Number(dayTab.dataset.editDay);
-        resetGapComposer();
         renderWeekStrip();
         renderToolbar();
         renderGaps();
+        renderTimeline();
         saveApp();
         return;
       }
@@ -1842,22 +1792,13 @@ export function bootstrapTimetableApp() {
       }
     });
 
-    els.gapForm.addEventListener("submit", event => {
-      event.preventDefault();
-      addOrUpdateGap();
-    });
-
-    if (els.dayTimelineTrack) {
-      els.dayTimelineTrack.addEventListener("pointerdown", onDayTimelinePointerDown);
-    }
+    if (els.dayTimelineTrack) bindDayTimelineTrack(els.dayTimelineTrack);
 
     els.taskForm.addEventListener("submit", event => {
       event.preventDefault();
       addTask();
     });
 
-    els.useNowBtn.addEventListener("click", useCurrentTime);
-    els.cancelGapEditBtn.addEventListener("click", resetGapComposer);
     els.keepBuffer.addEventListener("change", () => {
       profile().keepBuffer = els.keepBuffer.checked;
       refreshEverything();
@@ -1896,7 +1837,6 @@ export function bootstrapTimetableApp() {
       els.profileSelect.addEventListener("change", () => {
         app.activeProfileId = els.profileSelect.value;
         activeEditDay = 0;
-        resetGapComposer();
         setActiveStep(profile().activeStep || 1);
         els.keepBuffer.checked = profile().keepBuffer;
         document.querySelectorAll("[data-style]").forEach(btn => {
@@ -1912,7 +1852,6 @@ export function bootstrapTimetableApp() {
         if (name === null) return;
         addProfile(app, name || undefined);
         activeEditDay = 0;
-        resetGapComposer();
         refreshEverything();
       });
     }
@@ -1929,7 +1868,6 @@ export function bootstrapTimetableApp() {
         }
         removeProfile(app, app.activeProfileId);
         activeEditDay = 0;
-        resetGapComposer();
         refreshEverything();
       });
     }
@@ -2187,23 +2125,6 @@ export function bootstrapTimetableApp() {
       });
     }
 
-    const bindGapFromInput = (input, which) => {
-      if (!input) return;
-      const apply = () => {
-        if (state.syncingGapInputs) return;
-        const mins = parseTimeToMinutes(input.value, { roundToStep: true });
-        if (mins == null) return;
-        if (which === "start") state.draftGap.start = mins;
-        else state.draftGap.end = mins;
-        ensureDraftGapOrder(which === "start" ? "start" : "end");
-        syncDraftDisplays();
-      };
-      input.addEventListener("change", apply);
-      input.addEventListener("input", apply);
-    };
-    bindGapFromInput(els.gapStartInput, "start");
-    bindGapFromInput(els.gapEndInput, "end");
-
     if (els.cancelTaskEditBtn) {
       els.cancelTaskEditBtn.addEventListener("click", () => {
         resetTaskComposer();
@@ -2292,8 +2213,8 @@ export function bootstrapTimetableApp() {
     updateTaskRangeReadout();
     bindCalendarScrollHint();
     setActiveStep(profile().activeStep || 1);
-    resetGapComposer();
     refreshEverything();
+    scrollTimelineToDefaultHour();
     setupOnboarding();
     if (navigator.storage?.persist) void navigator.storage.persist().catch(() => {});
   };

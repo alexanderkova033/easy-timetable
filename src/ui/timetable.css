@@ -2045,8 +2045,17 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
+.day-timeline-card { padding: 22px; }
 .day-timeline-card .calendar-shell-wrap { margin-top: 14px; }
-.day-timeline-shell { max-height: 640px; }
+.timeline-mode-toggle { flex-wrap: nowrap; }
+@keyframes timelineModePop {
+ 0% { opacity: 0.4; transform: scale(0.985) translateY(4px); }
+ 100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.day-timeline-card.mode-pop .calendar-shell-wrap {
+ animation: timelineModePop 0.4s var(--ease-out-expo);
+}
+.day-timeline-shell { max-height: 640px; position: relative; }
 .day-timeline {
  position: relative;
  min-height: 320px;
@@ -2061,23 +2070,48 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  touch-action: none;
  user-select: none;
 }
+.week-timeline {
+ position: relative;
+}
+.week-timeline .week-col-track.day-timeline-track {
+ position: relative;
+ left: auto;
+ right: auto;
+ top: auto;
+ bottom: auto;
+ cursor: crosshair;
+ touch-action: none;
+ user-select: none;
+}
+@keyframes gapBlockIn {
+ 0% { opacity: 0; transform: scaleY(0.6); }
+ 60% { opacity: 1; transform: scaleY(1.04); }
+ 100% { opacity: 1; transform: scaleY(1); }
+}
 .day-timeline-block {
  cursor: grab;
  display: flex;
  flex-direction: column;
  justify-content: center;
  touch-action: none;
- transition: top 0.15s ease, height 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+ transform-origin: top center;
+ transition: top 0.22s var(--ease-out-expo), height 0.22s var(--ease-out-expo),
+  box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s var(--ease-smooth);
+}
+.day-timeline-block:hover {
+ transform: translateY(-1px) scale(1.006);
+ box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+ z-index: 3;
 }
 .day-timeline-block.dragging {
  cursor: grabbing;
  z-index: 10;
- transition: none;
- box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+ transition: box-shadow 0.18s ease;
+ box-shadow: 0 16px 34px rgba(0, 0, 0, 0.4);
+ transform: scale(1.015);
 }
-.day-timeline-block.editing {
- border-color: rgba(129, 140, 248, 0.75);
- box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.35);
+.day-timeline-block.just-committed {
+ animation: gapBlockIn 0.38s var(--ease-out-expo);
 }
 .day-timeline-block-body {
  padding: 2px 22px 2px 2px;
@@ -2102,27 +2136,34 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  position: absolute;
  left: 0;
  right: 0;
- height: 14px;
+ height: 22px;
  cursor: ns-resize;
  touch-action: none;
+ z-index: 2;
 }
-.day-timeline-handle-top { top: -7px; }
-.day-timeline-handle-bottom { bottom: -7px; }
+.day-timeline-handle-top { top: -11px; }
+.day-timeline-handle-bottom { bottom: -11px; }
 .day-timeline-handle::after {
  content: "";
  position: absolute;
  left: 50%;
  top: 50%;
- width: 28px;
- height: 4px;
- border-radius: 4px;
- background: rgba(255, 255, 255, 0.55);
- transform: translate(-50%, -50%);
+ width: 36px;
+ height: 5px;
+ border-radius: 5px;
+ background: rgba(255, 255, 255, 0.65);
+ box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+ transform: translate(-50%, -50%) scaleX(0.6);
  opacity: 0;
- transition: opacity 0.15s ease;
+ transition: opacity 0.15s ease, transform 0.2s var(--ease-out-expo);
 }
 .day-timeline-block:hover .day-timeline-handle::after {
- opacity: 0.7;
+ opacity: 0.85;
+ transform: translate(-50%, -50%) scaleX(1);
+}
+.day-timeline-handle:hover::after {
+ opacity: 1;
+ background: #fff;
 }
 .day-timeline-block-remove {
  position: absolute;
@@ -2140,18 +2181,25 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  line-height: 1;
  cursor: pointer;
  opacity: 0;
- transition: opacity 0.15s ease, background 0.15s ease;
+ transform: scale(0.8);
+ transition: opacity 0.15s ease, transform 0.15s var(--ease-out-expo), background 0.15s ease;
 }
 .day-timeline-block:hover .day-timeline-block-remove,
 .day-timeline-block:focus-within .day-timeline-block-remove {
  opacity: 1;
+ transform: scale(1);
 }
 .day-timeline-block-remove:hover {
- background: rgba(0, 0, 0, 0.48);
+ background: rgba(220, 38, 38, 0.85);
+ transform: scale(1.1);
+}
+@keyframes ghostGlow {
+ 0%, 100% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15), 0 8px 20px rgba(79, 70, 229, 0.35); }
+ 50% { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3), 0 10px 28px rgba(99, 102, 241, 0.55); }
 }
 .day-timeline-ghost {
  position: absolute;
- left: 90px;
+ left: 12px;
  right: 12px;
  z-index: 6;
  display: flex;
@@ -2160,7 +2208,8 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  padding: 6px 10px;
  border-radius: 16px;
  background: linear-gradient(135deg, #6366f1, #4f46e5);
- border: 2px dashed rgba(255, 255, 255, 0.55);
+ background-size: 200% 200%;
+ border: 2px dashed rgba(255, 255, 255, 0.6);
  color: #fff;
  font-weight: 700;
  font-size: 0.82rem;
@@ -2168,9 +2217,13 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
  pointer-events: none;
  overflow: hidden;
+ animation: ghostGlow 1.1s ease-in-out infinite;
 }
-.day-timeline-ghost[hidden] {
- display: none;
+.week-timeline .week-col-track .day-timeline-ghost {
+ left: 4px;
+ right: 4px;
+ font-size: 0.72rem;
+ padding: 4px 6px;
 }
 .preview-pill,
 .unscheduled-row {
