@@ -1,8 +1,6 @@
 import {
   HOUR_HEIGHT,
-  WHEEL_ITEM,
   MINUTE_STEP,
-  MINUTE_VALUES,
   createTaskId,
   clamp,
 } from "../shared/constants.js";
@@ -113,12 +111,13 @@ export function bootstrapTimetableApp() {
   const els = {
     stepButtons: [...document.querySelectorAll(".step-btn")],
     stepPanels: [...document.querySelectorAll("[data-step-panel]")],
-    startDisplay: document.getElementById("startDisplay"),
-    endDisplay: document.getElementById("endDisplay"),
-    startHourWheel: document.getElementById("startHourWheel"),
-    startMinuteWheel: document.getElementById("startMinuteWheel"),
-    endHourWheel: document.getElementById("endHourWheel"),
-    endMinuteWheel: document.getElementById("endMinuteWheel"),
+    gapRangeReadout: document.getElementById("gapRangeReadout"),
+    dayTimeline: document.getElementById("dayTimeline"),
+    dayTimelineRail: document.getElementById("dayTimelineRail"),
+    dayTimelineLines: document.getElementById("dayTimelineLines"),
+    dayTimelineTrack: document.getElementById("dayTimelineTrack"),
+    dayTimelineGhost: document.getElementById("dayTimelineGhost"),
+    dayTimelineDayLabel: document.getElementById("dayTimelineDayLabel"),
     gapForm: document.getElementById("gapForm"),
     useNowBtn: document.getElementById("useNowBtn"),
     gapSubmitBtn: document.getElementById("gapSubmitBtn"),
@@ -212,8 +211,8 @@ export function bootstrapTimetableApp() {
     shareLinkBtn: document.getElementById("shareLinkBtn"),
   };
 
-  const wheelTimers = {};
   let draggedTaskId = null;
+  let dayTimelineDrag = null;
 
   const setMessage = (el, text, type = "") => {
     el.textContent = text;
@@ -393,45 +392,20 @@ export function bootstrapTimetableApp() {
     saveApp();
   };
 
-  const renderWheelOptions = (container, values) => {
-    container.innerHTML = values
-      .map(
-        value =>
-          `<div class="wheel-option" data-value="${value}">${String(value).padStart(2, "0")}</div>`,
-      )
-      .join("");
-  };
-
-  const getWheelSelectedValue = (container, values) => {
-    const index = clamp(Math.round(container.scrollTop / WHEEL_ITEM), 0, values.length - 1);
-    return values[index];
-  };
-
-  const setWheelPosition = (container, values, value, instant = false) => {
-    const index = values.indexOf(value);
-    const top = (index < 0 ? 0 : index) * WHEEL_ITEM;
-    container.scrollTo({ top, behavior: instant ? "auto" : "smooth" });
-    updateWheelSelectedClass(container, values, value);
-  };
-
-  const updateWheelSelectedClass = (container, values, value) => {
-    container.querySelectorAll(".wheel-option").forEach(option => {
-      option.classList.toggle("selected", Number(option.dataset.value) === value);
-    });
-  };
-
   const state = {
     draftGap: { start: 9 * 60, end: 10 * 60 },
     editingGapId: null,
     editingTaskId: null,
     syncingGapInputs: false,
+    defaultGapDuration: 30,
   };
 
   const syncDraftDisplays = () => {
     const [sh, sm] = toTime(state.draftGap.start).split(":");
     const [eh, em] = toTime(state.draftGap.end).split(":");
-    els.startDisplay.textContent = `${sh}:${sm}`;
-    els.endDisplay.textContent = `${eh}:${em}`;
+    if (els.gapRangeReadout) {
+      els.gapRangeReadout.textContent = `Free for ${formatDuration(state.draftGap.end - state.draftGap.start)}`;
+    }
     state.syncingGapInputs = true;
     try {
       if (els.gapStartInput) els.gapStartInput.value = `${sh}:${sm}`;
@@ -525,70 +499,222 @@ export function bootstrapTimetableApp() {
     }
   };
 
-  const syncAllWheelsFromDraft = (instant = true) => {
-    const startHour = Math.floor(state.draftGap.start / 60);
-    const startMinute = state.draftGap.start % 60;
-    const endHour = Math.floor(state.draftGap.end / 60);
-    const endMinute = state.draftGap.end % 60;
-    setWheelPosition(els.startHourWheel, Array.from({ length: 24 }, (_, i) => i), startHour, instant);
-    setWheelPosition(els.startMinuteWheel, MINUTE_VALUES, startMinute, instant);
-    setWheelPosition(els.endHourWheel, Array.from({ length: 24 }, (_, i) => i), endHour, instant);
-    setWheelPosition(els.endMinuteWheel, MINUTE_VALUES, endMinute, instant);
-    syncDraftDisplays();
+  const DAY_TIMELINE_MIN_HOUR_SPAN = 2;
+
+  const getDayTimelineRange = () => {
+    const gaps = editingGaps();
+    if (!gaps.length) return { startHour: 6, endHour: 23 };
+    const values = [];
+    gaps.forEach(g => values.push(g.startMinutes, g.endMinutes));
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return {
+      startHour: clamp(Math.floor(min / 60) - 1, 0, 24 - DAY_TIMELINE_MIN_HOUR_SPAN),
+      endHour: clamp(Math.ceil(max / 60) + 1, DAY_TIMELINE_MIN_HOUR_SPAN, 24),
+    };
   };
 
-  const updateDraftFromWheel = (target, part) => {
-    const hourWheel = target === "start" ? els.startHourWheel : els.endHourWheel;
-    const minuteWheel = target === "start" ? els.startMinuteWheel : els.endMinuteWheel;
-    const hour = getWheelSelectedValue(hourWheel, Array.from({ length: 24 }, (_, i) => i));
-    const minute = getWheelSelectedValue(minuteWheel, MINUTE_VALUES);
-    state.draftGap[target] = hour * 60 + minute;
-    ensureDraftGapOrder(target);
-    syncDraftDisplays();
-    if (part) syncAllWheelsFromDraft(false);
+  const dayTimelineMinutesFromClientY = (clientY, startHour) => {
+    const track = els.dayTimelineTrack;
+    if (!track) return 0;
+    const rect = track.getBoundingClientRect();
+    const raw = startHour * 60 + ((clientY - rect.top) / HOUR_HEIGHT) * 60;
+    return clamp(Math.round(raw / MINUTE_STEP) * MINUTE_STEP, 0, 24 * 60);
   };
 
-  const bindWheel = (container, target, part, values) => {
-    if (!container) return;
-    container.tabIndex = 0;
+  const renderDayTimeline = () => {
+    if (!els.dayTimeline || !els.dayTimelineTrack) return;
+    if (els.dayTimelineDayLabel) els.dayTimelineDayLabel.textContent = DAY_SHORT[activeEditDay];
 
-    container.addEventListener("scroll", () => {
-      clearTimeout(wheelTimers[`${target}-${part}`]);
-      wheelTimers[`${target}-${part}`] = setTimeout(() => {
-        const value = getWheelSelectedValue(container, values);
-        setWheelPosition(container, values, value, false);
-        updateDraftFromWheel(target, part);
-      }, 70);
-    });
+    const { startHour, endHour } = getDayTimelineRange();
+    const totalHeight = (endHour - startHour) * HOUR_HEIGHT;
+    els.dayTimeline.style.height = `${totalHeight}px`;
 
-    container.addEventListener("click", event => {
-      const option = event.target.closest(".wheel-option");
-      if (!option) return;
-      const value = Number(option.dataset.value);
-      setWheelPosition(container, values, value, false);
-      updateDraftFromWheel(target, part);
-    });
-
-    container.addEventListener("keydown", e => {
-      if (
-        !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"].includes(e.key)
-      ) {
-        return;
+    const labels = [];
+    const lines = [];
+    for (let hour = startHour; hour <= endHour; hour += 1) {
+      const top = (hour - startHour) * HOUR_HEIGHT;
+      if (hour < endHour) {
+        labels.push(`<div class="time-label" style="top:${top}px">${String(hour).padStart(2, "0")}:00</div>`);
       }
-      e.preventDefault();
-      const last = values.length - 1;
-      let i = clamp(Math.round(container.scrollTop / WHEEL_ITEM), 0, last);
-      if (e.key === "ArrowUp") i -= 1;
-      else if (e.key === "ArrowDown") i += 1;
-      else if (e.key === "PageUp") i -= 3;
-      else if (e.key === "PageDown") i += 3;
-      else if (e.key === "Home") i = 0;
-      else if (e.key === "End") i = last;
-      i = clamp(i, 0, last);
-      const instant = prefersReducedMotion();
-      setWheelPosition(container, values, values[i], instant);
-      updateDraftFromWheel(target, part);
-    });
+      lines.push(`<div class="hour-line" style="top:${top}px"></div>`);
+    }
+    if (els.dayTimelineRail) els.dayTimelineRail.innerHTML = labels.join("");
+    if (els.dayTimelineLines) els.dayTimelineLines.innerHTML = lines.join("");
+
+    const gaps = editingGaps();
+    els.dayTimelineTrack.innerHTML = gaps
+      .map(gap => {
+        const top = ((gap.startMinutes - startHour * 60) / 60) * HOUR_HEIGHT;
+        const height = Math.max(20, ((gap.endMinutes - gap.startMinutes) / 60) * HOUR_HEIGHT);
+        const editing = gap.id === state.editingGapId ? " editing" : "";
+        return `
+        <div class="calendar-block gap day-timeline-block${editing}" data-gap-id="${gap.id}" style="top:${top}px;height:${height}px;">
+          <div class="day-timeline-handle day-timeline-handle-top" data-handle="start" aria-hidden="true"></div>
+          <div class="day-timeline-block-body">
+            <span class="day-timeline-block-time">${gap.start} – ${gap.end}</span>
+            <span class="day-timeline-block-duration">${formatDuration(gap.duration)}</span>
+          </div>
+          <button type="button" class="day-timeline-block-remove" data-gap-delete="${gap.id}" title="Remove" aria-label="Remove gap">×</button>
+          <div class="day-timeline-handle day-timeline-handle-bottom" data-handle="end" aria-hidden="true"></div>
+        </div>`;
+      })
+      .join("");
+  };
+
+  const positionDayTimelineBlock = (gapId, start, end, startHour) => {
+    const el = els.dayTimelineTrack?.querySelector(`.day-timeline-block[data-gap-id="${gapId}"]`);
+    if (!el) return;
+    const top = ((start - startHour * 60) / 60) * HOUR_HEIGHT;
+    const height = Math.max(20, ((end - start) / 60) * HOUR_HEIGHT);
+    el.style.top = `${top}px`;
+    el.style.height = `${height}px`;
+    const timeEl = el.querySelector(".day-timeline-block-time");
+    if (timeEl) timeEl.textContent = `${toTime(start)} – ${toTime(end)}`;
+    const durEl = el.querySelector(".day-timeline-block-duration");
+    if (durEl) durEl.textContent = formatDuration(end - start);
+  };
+
+  const showDayTimelineGhost = (start, end, startHour) => {
+    const ghost = els.dayTimelineGhost;
+    if (!ghost) return;
+    const top = ((start - startHour * 60) / 60) * HOUR_HEIGHT;
+    const height = Math.max(20, ((end - start) / 60) * HOUR_HEIGHT);
+    ghost.style.top = `${top}px`;
+    ghost.style.height = `${height}px`;
+    ghost.hidden = false;
+    ghost.textContent = `${toTime(start)} – ${toTime(end)} · ${formatDuration(end - start)}`;
+  };
+
+  const hideDayTimelineGhost = () => {
+    if (els.dayTimelineGhost) els.dayTimelineGhost.hidden = true;
+  };
+
+  const onDayTimelinePointerMove = event => {
+    if (!dayTimelineDrag) return;
+    const minutes = dayTimelineMinutesFromClientY(event.clientY, dayTimelineDrag.startHour);
+
+    if (dayTimelineDrag.mode === "create") {
+      const start = Math.min(dayTimelineDrag.anchorMinutes, minutes);
+      const end = Math.max(dayTimelineDrag.anchorMinutes, minutes, start + MINUTE_STEP);
+      dayTimelineDrag.previewStart = start;
+      dayTimelineDrag.previewEnd = end;
+      if (Math.abs(minutes - dayTimelineDrag.anchorMinutes) >= MINUTE_STEP) dayTimelineDrag.moved = true;
+      showDayTimelineGhost(start, end, dayTimelineDrag.startHour);
+      return;
+    }
+
+    const duration = dayTimelineDrag.original.end - dayTimelineDrag.original.start;
+    let newStart = dayTimelineDrag.original.start;
+    let newEnd = dayTimelineDrag.original.end;
+
+    if (dayTimelineDrag.mode === "move") {
+      const delta = minutes - dayTimelineDrag.pointerStartMinutes;
+      if (delta !== 0) dayTimelineDrag.moved = true;
+      newStart = clamp(dayTimelineDrag.original.start + delta, 0, 24 * 60 - duration);
+      newEnd = newStart + duration;
+    } else if (dayTimelineDrag.mode === "resize-start") {
+      newStart = clamp(minutes, 0, dayTimelineDrag.original.end - MINUTE_STEP);
+      newEnd = dayTimelineDrag.original.end;
+      dayTimelineDrag.moved = true;
+    } else if (dayTimelineDrag.mode === "resize-end") {
+      newStart = dayTimelineDrag.original.start;
+      newEnd = clamp(minutes, dayTimelineDrag.original.start + MINUTE_STEP, 24 * 60);
+      dayTimelineDrag.moved = true;
+    }
+
+    dayTimelineDrag.previewStart = newStart;
+    dayTimelineDrag.previewEnd = newEnd;
+    positionDayTimelineBlock(dayTimelineDrag.gapId, newStart, newEnd, dayTimelineDrag.startHour);
+  };
+
+  const onDayTimelinePointerUp = () => {
+    window.removeEventListener("pointermove", onDayTimelinePointerMove);
+    const drag = dayTimelineDrag;
+    dayTimelineDrag = null;
+    if (!drag) return;
+
+    els.dayTimelineTrack?.classList.remove("is-dragging");
+
+    if (drag.mode === "create") {
+      hideDayTimelineGhost();
+      let start = drag.previewStart;
+      let end = drag.previewEnd;
+      if (!drag.moved) {
+        start = drag.anchorMinutes;
+        end = clamp(start + state.defaultGapDuration, start + MINUTE_STEP, 24 * 60);
+      }
+      state.editingGapId = null;
+      state.draftGap.start = start;
+      state.draftGap.end = end;
+      addOrUpdateGap();
+      return;
+    }
+
+    const el = els.dayTimelineTrack?.querySelector(`.day-timeline-block[data-gap-id="${drag.gapId}"]`);
+    el?.classList.remove("dragging");
+
+    if (!drag.moved) {
+      editGap(drag.gapId, { scroll: false });
+      return;
+    }
+
+    state.editingGapId = drag.gapId;
+    state.draftGap.start = drag.previewStart;
+    state.draftGap.end = drag.previewEnd;
+    addOrUpdateGap();
+  };
+
+  const onDayTimelinePointerDown = event => {
+    if (event.button !== undefined && event.button !== 0) return;
+    const track = els.dayTimelineTrack;
+    if (!track) return;
+    if (event.target.closest(".day-timeline-block-remove")) return;
+
+    const { startHour } = getDayTimelineRange();
+    const blockEl = event.target.closest(".day-timeline-block");
+    const handleEl = event.target.closest(".day-timeline-handle");
+    const pointerMinutes = dayTimelineMinutesFromClientY(event.clientY, startHour);
+
+    if (blockEl && handleEl) {
+      const gapId = Number(blockEl.dataset.gapId);
+      const gap = editingGaps().find(g => g.id === gapId);
+      if (!gap) return;
+      dayTimelineDrag = {
+        mode: handleEl.dataset.handle === "start" ? "resize-start" : "resize-end",
+        gapId,
+        startHour,
+        original: { start: gap.startMinutes, end: gap.endMinutes },
+        moved: false,
+      };
+      blockEl.classList.add("dragging");
+    } else if (blockEl) {
+      const gapId = Number(blockEl.dataset.gapId);
+      const gap = editingGaps().find(g => g.id === gapId);
+      if (!gap) return;
+      dayTimelineDrag = {
+        mode: "move",
+        gapId,
+        startHour,
+        original: { start: gap.startMinutes, end: gap.endMinutes },
+        pointerStartMinutes: pointerMinutes,
+        moved: false,
+      };
+      blockEl.classList.add("dragging");
+    } else {
+      dayTimelineDrag = {
+        mode: "create",
+        startHour,
+        anchorMinutes: pointerMinutes,
+        moved: false,
+      };
+      track.classList.add("is-dragging");
+      showDayTimelineGhost(pointerMinutes, pointerMinutes + MINUTE_STEP, startHour);
+    }
+
+    event.preventDefault();
+    window.addEventListener("pointermove", onDayTimelinePointerMove);
+    window.addEventListener("pointerup", onDayTimelinePointerUp, { once: true });
   };
 
   const applyGapDuration = duration => {
@@ -598,7 +724,8 @@ export function bootstrapTimetableApp() {
       24 * 60 - MINUTE_STEP,
     );
     ensureDraftGapOrder("end");
-    syncAllWheelsFromDraft(false);
+    state.defaultGapDuration = duration;
+    syncDraftDisplays();
     document.querySelectorAll("[data-gap-duration]").forEach(button => {
       button.classList.toggle("active", Number(button.dataset.gapDuration) === duration);
     });
@@ -607,7 +734,7 @@ export function bootstrapTimetableApp() {
   const useCurrentTime = () => {
     state.draftGap.start = clamp(getRoundedNowMinutes(), 0, 24 * 60 - MINUTE_STEP);
     state.draftGap.end = clamp(state.draftGap.start + 60, MINUTE_STEP, 24 * 60 - MINUTE_STEP);
-    syncAllWheelsFromDraft(false);
+    syncDraftDisplays();
   };
 
   const resetGapComposer = () => {
@@ -617,8 +744,8 @@ export function bootstrapTimetableApp() {
     els.gapSubmitBtn.textContent = "Add gap";
     els.cancelGapEditBtn.hidden = true;
     clearMessage(els.gapMessage);
-    syncAllWheelsFromDraft(true);
     applyGapDuration(30);
+    renderDayTimeline();
   };
 
   const addOrUpdateGap = () => {
@@ -655,7 +782,7 @@ export function bootstrapTimetableApp() {
     resetGapComposer();
   };
 
-  const editGap = id => {
+  const editGap = (id, { scroll = true } = {}) => {
     const gap = editingGaps().find(item => item.id === id);
     if (!gap) return;
     state.editingGapId = id;
@@ -664,9 +791,10 @@ export function bootstrapTimetableApp() {
     els.gapSubmitBtn.textContent = "Save gap";
     els.cancelGapEditBtn.hidden = false;
     clearMessage(els.gapMessage);
-    syncAllWheelsFromDraft(true);
+    syncDraftDisplays();
+    renderDayTimeline();
     setActiveStep(1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const removeGap = id => {
@@ -1345,6 +1473,7 @@ export function bootstrapTimetableApp() {
     renderWeekStrip();
     renderToolbar();
     renderGaps();
+    renderDayTimeline();
     renderBulkApplyBar();
     renderTasks();
     renderTaskMeta();
@@ -1520,7 +1649,6 @@ export function bootstrapTimetableApp() {
         app = next;
         activeEditDay = 0;
         applyChrome();
-        syncAllWheelsFromDraft(true);
         resetGapComposer();
         setActiveStep(profile().activeStep || 1);
         refreshEverything();
@@ -1606,8 +1734,8 @@ export function bootstrapTimetableApp() {
     document.addEventListener("click", event => {
       const scrollComposer = event.target.closest("[data-scroll-to-gap-composer]");
       if (scrollComposer) {
-        els.gapForm?.scrollIntoView({ behavior: "smooth", block: "center" });
-        if (els.startHourWheel) els.startHourWheel.focus({ preventScroll: true });
+        els.dayTimeline?.scrollIntoView({ behavior: "smooth", block: "center" });
+        els.gapStartInput?.focus({ preventScroll: true });
         return;
       }
 
@@ -1718,6 +1846,10 @@ export function bootstrapTimetableApp() {
       event.preventDefault();
       addOrUpdateGap();
     });
+
+    if (els.dayTimelineTrack) {
+      els.dayTimelineTrack.addEventListener("pointerdown", onDayTimelinePointerDown);
+    }
 
     els.taskForm.addEventListener("submit", event => {
       event.preventDefault();
@@ -2064,7 +2196,7 @@ export function bootstrapTimetableApp() {
         if (which === "start") state.draftGap.start = mins;
         else state.draftGap.end = mins;
         ensureDraftGapOrder(which === "start" ? "start" : "end");
-        syncAllWheelsFromDraft(prefersReducedMotion());
+        syncDraftDisplays();
       };
       input.addEventListener("change", apply);
       input.addEventListener("input", apply);
@@ -2141,15 +2273,7 @@ export function bootstrapTimetableApp() {
     const shareImported = await tryImportShareFromHash();
     if (shareImported) activeEditDay = 0;
     applyChrome();
-    renderWheelOptions(els.startHourWheel, Array.from({ length: 24 }, (_, i) => i));
-    renderWheelOptions(els.endHourWheel, Array.from({ length: 24 }, (_, i) => i));
-    renderWheelOptions(els.startMinuteWheel, MINUTE_VALUES);
-    renderWheelOptions(els.endMinuteWheel, MINUTE_VALUES);
     renderTaskRepeatChips();
-    bindWheel(els.startHourWheel, "start", "hour", Array.from({ length: 24 }, (_, i) => i));
-    bindWheel(els.startMinuteWheel, "start", "minute", MINUTE_VALUES);
-    bindWheel(els.endHourWheel, "end", "hour", Array.from({ length: 24 }, (_, i) => i));
-    bindWheel(els.endMinuteWheel, "end", "minute", MINUTE_VALUES);
     bindEvents();
 
     if (els.templateRow) {
@@ -2165,8 +2289,6 @@ export function bootstrapTimetableApp() {
     document.querySelectorAll("[data-style]").forEach(btn => {
       btn.classList.toggle("active", btn.dataset.style === profile().generationStyle);
     });
-    syncAllWheelsFromDraft(true);
-    applyGapDuration(30);
     updateTaskRangeReadout();
     bindCalendarScrollHint();
     setActiveStep(profile().activeStep || 1);

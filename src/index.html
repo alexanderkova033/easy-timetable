@@ -206,107 +206,101 @@
           </div>
         </div>
 
-        <div class="step1-workspace">
-        <div class="day-tabs-bar week-edit-bar" aria-label="Pick a day to edit gaps">
-          <span class="day-tabs-kicker" id="dayTabsLabel">Editing</span>
-          <div class="week-strip" id="weekStrip" role="tablist" aria-labelledby="dayTabsLabel"></div>
-        </div>
-        <details class="step1-disclosure step1-disclosure--tools">
-          <summary class="step1-disclosure-summary">
-            <span class="step1-disclosure-title">Templates &amp; copy from another day</span>
-            <span class="step1-disclosure-meta">Optional shortcuts</span>
-          </summary>
-          <div class="step1-disclosure-body step1-disclosure-tools">
-            <div class="template-bar">
-              <span class="template-bar-label">Quick layout for this day</span>
-              <div class="template-row" id="templateRow"></div>
-            </div>
-            <div class="copy-day-bar">
-              <label class="copy-day-label" for="copyDaySource">Copy gaps from</label>
-              <select id="copyDaySource" class="control-select copy-day-select"></select>
-              <button type="button" class="soft-btn" id="copyDayBtn">Apply to this day</button>
-            </div>
-            <div class="bulk-apply-bar" id="bulkApplyBar">
-              <div class="bulk-apply-head">
-                <span class="bulk-apply-title">Bulk apply</span>
-                <span class="bulk-apply-meta" id="bulkApplyLead">Use <strong id="bulkApplySourceLabel">Mon</strong>’s gaps on multiple days</span>
+        <div class="step3-grid">
+          <div class="side-stack">
+            <section class="subcard">
+              <div class="sub-head">
+                <h3>Day</h3>
+                <span id="dayTabsLabel">Editing</span>
               </div>
-              <div class="bulk-day-checks" id="bulkDayChecks" aria-label="Select days to receive gaps"></div>
-              <div class="bulk-apply-actions">
-                <button type="button" class="soft-btn" id="bulkSelectWeekdays">Weekdays</button>
-                <button type="button" class="soft-btn" id="bulkSelectAllOther">All other days</button>
-                <button type="button" class="primary-btn" id="bulkApplyGapsBtn">Apply to selected</button>
-              </div>
-            </div>
-          </div>
-        </details>
-
-        <form id="gapForm" class="stack" novalidate>
-          <div class="gap-clock" aria-label="Gap start and end time">
-            <div class="gap-clock-rings" aria-hidden="true"></div>
-            <div class="gap-clock-inner">
-          <div class="wheel-time-grid">
-            <section class="wheel-card">
-              <div class="wheel-card-head">
-                <span class="wheel-label">Start</span>
-                <strong class="wheel-time-readout" id="startDisplay">09:00</strong>
-                <label class="sr-only" for="gapStartInput">Start time</label>
-                <input type="time" class="gap-time-input" id="gapStartInput" step="300" />
-              </div>
-              <div class="wheel-picker" data-picker="start">
-                <div class="wheel-column-wrap">
-                  <div class="wheel-overlay" aria-hidden="true"></div>
-                  <div class="wheel-column" id="startHourWheel" data-wheel="start-hour" aria-label="Start hour"></div>
-                </div>
-                <div class="wheel-separator">:</div>
-                <div class="wheel-column-wrap">
-                  <div class="wheel-overlay" aria-hidden="true"></div>
-                  <div class="wheel-column" id="startMinuteWheel" data-wheel="start-minute" aria-label="Start minute"></div>
-                </div>
-              </div>
+              <div class="week-strip" id="weekStrip" role="tablist" aria-labelledby="dayTabsLabel"></div>
             </section>
 
-            <section class="wheel-card">
-              <div class="wheel-card-head">
-                <span class="wheel-label">End</span>
-                <strong class="wheel-time-readout" id="endDisplay">10:00</strong>
-                <label class="sr-only" for="gapEndInput">End time</label>
-                <input type="time" class="gap-time-input" id="gapEndInput" step="300" />
-              </div>
-              <div class="wheel-picker" data-picker="end">
-                <div class="wheel-column-wrap">
-                  <div class="wheel-overlay" aria-hidden="true"></div>
-                  <div class="wheel-column" id="endHourWheel" data-wheel="end-hour" aria-label="End hour"></div>
+            <details class="step1-disclosure step1-disclosure--tools subcard">
+              <summary class="step1-disclosure-summary">
+                <span class="step1-disclosure-title">Templates &amp; copy from another day</span>
+                <span class="step1-disclosure-meta">Optional shortcuts</span>
+              </summary>
+              <div class="step1-disclosure-body step1-disclosure-tools">
+                <div class="template-bar">
+                  <span class="template-bar-label">Quick layout for this day</span>
+                  <div class="template-row" id="templateRow"></div>
                 </div>
-                <div class="wheel-separator">:</div>
-                <div class="wheel-column-wrap">
-                  <div class="wheel-overlay" aria-hidden="true"></div>
-                  <div class="wheel-column" id="endMinuteWheel" data-wheel="end-minute" aria-label="End minute"></div>
+                <div class="copy-day-bar">
+                  <label class="copy-day-label" for="copyDaySource">Copy gaps from</label>
+                  <select id="copyDaySource" class="control-select copy-day-select"></select>
+                  <button type="button" class="soft-btn" id="copyDayBtn">Apply to this day</button>
+                </div>
+                <div class="bulk-apply-bar" id="bulkApplyBar">
+                  <div class="bulk-apply-head">
+                    <span class="bulk-apply-title">Bulk apply</span>
+                    <span class="bulk-apply-meta" id="bulkApplyLead">Use <strong id="bulkApplySourceLabel">Mon</strong>’s gaps on multiple days</span>
+                  </div>
+                  <div class="bulk-day-checks" id="bulkDayChecks" aria-label="Select days to receive gaps"></div>
+                  <div class="bulk-apply-actions">
+                    <button type="button" class="soft-btn" id="bulkSelectWeekdays">Weekdays</button>
+                    <button type="button" class="soft-btn" id="bulkSelectAllOther">All other days</button>
+                    <button type="button" class="primary-btn" id="bulkApplyGapsBtn">Apply to selected</button>
+                  </div>
                 </div>
               </div>
-            </section>
-          </div>
-            </div>
+            </details>
+
+            <form id="gapForm" class="subcard quick-box" novalidate>
+              <div class="sub-head">
+                <h3>Fine-tune</h3>
+                <span>Precise adjustment</span>
+              </div>
+              <div class="quick-row">
+                <div class="field-box">
+                  <label for="gapStartInput">Start</label>
+                  <input type="time" class="gap-time-input" id="gapStartInput" step="300" />
+                </div>
+                <div class="field-box">
+                  <label for="gapEndInput">End</label>
+                  <input type="time" class="gap-time-input" id="gapEndInput" step="300" />
+                </div>
+              </div>
+              <p class="task-range-readout" id="gapRangeReadout">Free for 1h</p>
+              <div class="quick-row">
+                <button type="button" class="soft-btn" id="useNowBtn">Use current time</button>
+                <div class="chip-row" role="group" aria-label="Default tap duration">
+                  <button type="button" class="chip-btn active" data-gap-duration="30">+30m</button>
+                  <button type="button" class="chip-btn" data-gap-duration="45">+45m</button>
+                  <button type="button" class="chip-btn" data-gap-duration="60">+1h</button>
+                  <button type="button" class="chip-btn" data-gap-duration="90">+1h 30</button>
+                  <button type="button" class="chip-btn" data-gap-duration="120">+2h</button>
+                </div>
+              </div>
+              <div class="action-row">
+                <button type="submit" class="primary-btn" id="gapSubmitBtn">Add gap</button>
+                <button type="button" class="ghost-btn" id="cancelGapEditBtn" hidden>Cancel edit</button>
+              </div>
+              <div class="inline-message" id="gapMessage" aria-live="polite"></div>
+            </form>
           </div>
 
-          <div class="quick-box">
-            <div class="quick-row">
-              <button type="button" class="soft-btn" id="useNowBtn">Use current time</button>
-              <div class="chip-row" role="group" aria-label="Quick gap duration">
-                <button type="button" class="chip-btn active" data-gap-duration="30">+30m</button>
-                <button type="button" class="chip-btn" data-gap-duration="45">+45m</button>
-                <button type="button" class="chip-btn" data-gap-duration="60">+1h</button>
-                <button type="button" class="chip-btn" data-gap-duration="90">+1h 30</button>
-                <button type="button" class="chip-btn" data-gap-duration="120">+2h</button>
+          <div class="calendar-card day-timeline-card">
+            <div class="calendar-head">
+              <div>
+                <h3>Free time — <span id="dayTimelineDayLabel">Mon</span></h3>
+                <p>Click and drag to add a gap. Drag a block to move it, or its edges to resize. Click a block to fine-tune it.</p>
               </div>
             </div>
-            <div class="action-row">
-              <button type="submit" class="primary-btn" id="gapSubmitBtn">Add gap</button>
-              <button type="button" class="ghost-btn" id="cancelGapEditBtn" hidden>Cancel edit</button>
+            <div class="calendar-shell-wrap">
+              <div class="calendar-legend calendar-legend--sticky" aria-label="Legend">
+                <span><i class="legend-gap"></i>Free time</span>
+              </div>
+              <div class="calendar-shell day-timeline-shell">
+                <div class="day-timeline" id="dayTimeline">
+                  <div class="time-rail" id="dayTimelineRail"></div>
+                  <div id="dayTimelineLines"></div>
+                  <div class="day-timeline-track" id="dayTimelineTrack"></div>
+                  <div class="day-timeline-ghost" id="dayTimelineGhost" hidden></div>
+                </div>
+              </div>
             </div>
-            <div class="inline-message" id="gapMessage" aria-live="polite"></div>
           </div>
-        </form>
         </div>
 
         <div class="item-list" id="gapList"></div>
