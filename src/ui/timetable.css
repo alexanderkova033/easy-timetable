@@ -2017,14 +2017,24 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
 }
 .calendar-block.gap {
  z-index: 1;
- background: linear-gradient(180deg, rgba(52, 211, 153, 0.16), rgba(50, 90, 70, 0.42));
- border: 1px dashed rgba(52, 211, 153, 0.42);
- box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+ background:
+  repeating-linear-gradient(
+   135deg,
+   rgba(255, 255, 255, 0.055) 0px,
+   rgba(255, 255, 255, 0.055) 6px,
+   transparent 6px,
+   transparent 14px
+  ),
+  linear-gradient(180deg, rgba(52, 211, 153, 0.2), rgba(46, 100, 78, 0.46));
+ border: 1px solid rgba(52, 211, 153, 0.48);
+ border-left: 3px solid rgba(52, 211, 153, 0.85);
+ box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 22px rgba(52, 211, 153, 0.07);
 }
 .calendar-block.task {
  z-index: 2;
  background: linear-gradient(180deg, rgba(88, 130, 220, 0.55), rgba(40, 60, 110, 0.72));
  border: 2px solid rgba(170, 200, 255, 0.45);
+ border-left: 3px solid rgba(190, 215, 255, 0.9);
  box-shadow:
   0 8px 18px rgba(0, 0, 0, 0.35),
   0 12px 26px rgba(80, 120, 200, 0.18),
@@ -2049,11 +2059,11 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
 .day-timeline-card .calendar-shell-wrap { margin-top: 14px; }
 .timeline-mode-toggle { flex-wrap: nowrap; }
 @keyframes timelineModePop {
- 0% { opacity: 0.4; transform: scale(0.985) translateY(4px); }
- 100% { opacity: 1; transform: scale(1) translateY(0); }
+ 0% { opacity: 0.7; transform: translateY(2px); }
+ 100% { opacity: 1; transform: translateY(0); }
 }
 .day-timeline-card.mode-pop .calendar-shell-wrap {
- animation: timelineModePop 0.4s var(--ease-out-expo);
+ animation: timelineModePop 0.28s var(--ease-out-expo);
 }
 .day-timeline-shell { max-height: 640px; position: relative; }
 .day-timeline {
@@ -2084,8 +2094,7 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  user-select: none;
 }
 @keyframes gapBlockIn {
- 0% { opacity: 0; transform: scaleY(0.6); }
- 60% { opacity: 1; transform: scaleY(1.04); }
+ 0% { opacity: 0; transform: scaleY(0.85); }
  100% { opacity: 1; transform: scaleY(1); }
 }
 .day-timeline-block {
@@ -2095,23 +2104,27 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  justify-content: center;
  touch-action: none;
  transform-origin: top center;
- transition: top 0.22s var(--ease-out-expo), height 0.22s var(--ease-out-expo),
-  box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s var(--ease-smooth);
+ transition: top 0.2s var(--ease-out-expo), height 0.2s var(--ease-out-expo),
+  box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s var(--ease-smooth);
 }
 .day-timeline-block:hover {
- transform: translateY(-1px) scale(1.006);
- box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+ transform: translateY(-1px);
+ box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
  z-index: 3;
 }
 .day-timeline-block.dragging {
  cursor: grabbing;
  z-index: 10;
- transition: box-shadow 0.18s ease;
- box-shadow: 0 16px 34px rgba(0, 0, 0, 0.4);
- transform: scale(1.015);
+ transition: box-shadow 0.15s ease;
+ box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+ transform: scale(1.008);
+}
+.day-timeline-block.copying {
+ border-style: dashed;
+ cursor: copy;
 }
 .day-timeline-block.just-committed {
- animation: gapBlockIn 0.38s var(--ease-out-expo);
+ animation: gapBlockIn 0.26s var(--ease-out-expo);
 }
 .day-timeline-block-body {
  padding: 2px 22px 2px 2px;
@@ -2191,11 +2204,11 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
 }
 .day-timeline-block-remove:hover {
  background: rgba(220, 38, 38, 0.85);
- transform: scale(1.1);
+ transform: scale(1.05);
 }
 @keyframes ghostGlow {
- 0%, 100% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15), 0 8px 20px rgba(79, 70, 229, 0.35); }
- 50% { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3), 0 10px 28px rgba(99, 102, 241, 0.55); }
+ 0%, 100% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14), 0 8px 20px rgba(79, 70, 229, 0.32); }
+ 50% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22), 0 9px 22px rgba(99, 102, 241, 0.42); }
 }
 .day-timeline-ghost {
  position: absolute;
@@ -2217,7 +2230,7 @@ body[data-background="paper"], body[data-background="studio"] .calendar-scroll-h
  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
  pointer-events: none;
  overflow: hidden;
- animation: ghostGlow 1.1s ease-in-out infinite;
+ animation: ghostGlow 1.7s ease-in-out infinite;
 }
 .week-timeline .week-col-track .day-timeline-ghost {
  left: 4px;

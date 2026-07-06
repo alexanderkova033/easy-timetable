@@ -633,6 +633,31 @@ export function bootstrapTimetableApp() {
 
   const onDayTimelinePointerMove = event => {
     if (!dayTimelineDrag) return;
+
+    if (dayTimelineDrag.mode === "move") {
+      const overTrack =
+        document.elementFromPoint(event.clientX, event.clientY)?.closest(".day-timeline-track") ||
+        dayTimelineDrag.trackEl;
+      const overDayIdx = Number(overTrack.dataset.dayIdx);
+      if (overTrack !== dayTimelineDrag.trackEl && !Number.isNaN(overDayIdx)) {
+        const blockEl = dayTimelineDrag.trackEl.querySelector(
+          `.day-timeline-block[data-gap-id="${dayTimelineDrag.gapId}"]`,
+        );
+        if (blockEl) overTrack.appendChild(blockEl);
+        dayTimelineDrag.trackEl = overTrack;
+        dayTimelineDrag.targetDayIdx = overDayIdx;
+        dayTimelineDrag.moved = true;
+      }
+      const isCopy = event.altKey;
+      if (isCopy !== dayTimelineDrag.copy) {
+        dayTimelineDrag.copy = isCopy;
+        const blockEl = dayTimelineDrag.trackEl.querySelector(
+          `.day-timeline-block[data-gap-id="${dayTimelineDrag.gapId}"]`,
+        );
+        blockEl?.classList.toggle("copying", isCopy);
+      }
+    }
+
     const minutes = dayTimelineMinutesFromClientY(event.clientY, dayTimelineDrag.trackEl);
 
     if (dayTimelineDrag.mode === "create") {
@@ -690,9 +715,20 @@ export function bootstrapTimetableApp() {
     }
 
     const el = drag.trackEl.querySelector(`.day-timeline-block[data-gap-id="${drag.gapId}"]`);
-    el?.classList.remove("dragging");
+    el?.classList.remove("dragging", "copying");
 
     if (!drag.moved) return;
+
+    if (drag.mode === "move" && drag.copy) {
+      commitGap(drag.targetDayIdx, null, drag.previewStart, drag.previewEnd);
+      return;
+    }
+
+    if (drag.mode === "move" && drag.targetDayIdx !== drag.dayIdx) {
+      profile().gapsByDay[drag.dayIdx] = profile().gapsByDay[drag.dayIdx].filter(gap => gap.id !== drag.gapId);
+      commitGap(drag.targetDayIdx, drag.gapId, drag.previewStart, drag.previewEnd);
+      return;
+    }
 
     commitGap(drag.dayIdx, drag.gapId, drag.previewStart, drag.previewEnd);
   };
@@ -728,10 +764,12 @@ export function bootstrapTimetableApp() {
       dayTimelineDrag = {
         mode: "move",
         dayIdx,
+        targetDayIdx: dayIdx,
         trackEl: track,
         gapId,
         original: { start: gap.startMinutes, end: gap.endMinutes },
         pointerStartMinutes: pointerMinutes,
+        copy: false,
         moved: false,
       };
       blockEl.classList.add("dragging");
